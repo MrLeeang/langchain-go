@@ -14,6 +14,10 @@ import (
 
 // StreamResponse represents a single chunk of streamed content from the agent.
 type StreamResponse struct {
+
+	// ReasoningContent is the reasoning content in this chunk.
+	ReasoningContent string
+
 	// Content is the text content in this chunk.
 	Content string
 
@@ -92,11 +96,14 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 			stream, err := streamer.ChatStream(ctx, a.messages)
 			if err != nil {
 				ch <- StreamResponse{Error: fmt.Errorf("failed to create stream: %w", err)}
-				
+
 				return
 			}
 
 			var fullContent string
+
+			buffer := ""
+			isAssistantContent := false
 
 			for {
 				response, err := stream.Recv()
@@ -110,13 +117,34 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 					return
 				}
 
+				if len(response.Choices) > 0 && response.Choices[0].Delta.ReasoningContent != "" {
+					ch <- StreamResponse{ReasoningContent: response.Choices[0].Delta.ReasoningContent}
+				}
+
 				if len(response.Choices) > 0 && response.Choices[0].Delta.Content != "" {
 					content := response.Choices[0].Delta.Content
 					fullContent += content
+
+					if isAssistantContent {
+						ch <- StreamResponse{Content: content}
+						continue
+					}
 					// LLM returned raw data
-					// We don't need to send it to the channel
-					// We will handle it in the handleStreamResponse function
-					ch <- StreamResponse{Content: content}
+					// use buffer to find {"action"
+					buffer += content
+
+					if len(buffer) < 9 {
+						continue
+					}
+
+					if buffer[0:9] == string(`{"action"`) {
+						// tool use found, return the tool use
+					} else {
+						ch <- StreamResponse{Content: buffer}
+						buffer = ""
+						isAssistantContent = true
+					}
+
 				}
 			}
 

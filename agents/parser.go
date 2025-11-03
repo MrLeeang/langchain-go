@@ -74,4 +74,3 @@ func (a *Agent) findTool(name string) mcp.Tool {
 	}
 	return nil
 }
-

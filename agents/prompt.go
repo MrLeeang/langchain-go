@@ -11,7 +11,8 @@ func buildSystemPrompt(tools []mcp.Tool) string {
 	prompt := `You are an AI assistant. When you need external tools to complete a user request, you must return ONLY a valid JSON object (without any additional explanations) in the following format:
 1) To call a tool, return:
 {"action":"call_tool","tool":"<tool_name>","args":{...}}
-2) To provide a direct answer, return <direct answer content>`
+2) Directly output the answer
+`
 
 	if len(tools) > 0 {
 		prompt += "\n\nAvailable tools (use in the following format):\n"
