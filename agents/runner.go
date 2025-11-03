@@ -10,6 +10,7 @@ import (
 // Run processes a user message and returns the agent's response.
 // It handles tool calling iteratively until a final answer is reached or max iterations are exceeded.
 func (a *Agent) Run(message string) (string, error) {
+	a.ResetTokenUsage()
 	return a.RunWithContext(a.ctx, message)
 }
 
@@ -20,6 +21,13 @@ func (a *Agent) RunWithContext(ctx context.Context, message string) (string, err
 		Content: message,
 	}
 	a.messages = append(a.messages, userMsg)
+
+	// Calculate prompt token usage for all messages
+	for _, msg := range a.messages {
+		if msg.Role == openai.ChatMessageRoleUser || msg.Role == openai.ChatMessageRoleSystem {
+			a.CalculatePromptTokenUsage(msg.Content)
+		}
+	}
 
 	// Save user message to memory
 	if a.mem != nil && a.conversationID != "" {
@@ -48,6 +56,8 @@ func (a *Agent) RunWithContext(ctx context.Context, message string) (string, err
 			Content: output,
 		}
 		a.messages = append(a.messages, assistantMsg)
+
+		a.CalculateCompletionTokenUsage(output)
 
 		// Save assistant message to memory
 		if a.mem != nil && a.conversationID != "" {

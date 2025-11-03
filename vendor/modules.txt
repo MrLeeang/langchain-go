@@ -4,6 +4,10 @@ github.com/bahlo/generic-list-go
 # github.com/buger/jsonparser v1.1.1
 ## explicit; go 1.13
 github.com/buger/jsonparser
+# github.com/dlclark/regexp2 v1.10.0
+## explicit; go 1.13
+github.com/dlclark/regexp2
+github.com/dlclark/regexp2/syntax
 # github.com/google/uuid v1.6.0
 ## explicit
 github.com/google/uuid
@@ -21,6 +25,9 @@ github.com/mark3labs/mcp-go/client/transport
 github.com/mark3labs/mcp-go/mcp
 github.com/mark3labs/mcp-go/server
 github.com/mark3labs/mcp-go/util
+# github.com/pkoukk/tiktoken-go v0.1.8
+## explicit; go 1.19
+github.com/pkoukk/tiktoken-go
 # github.com/sashabaranov/go-openai v1.41.2
 ## explicit; go 1.18
 github.com/sashabaranov/go-openai

@@ -89,7 +89,14 @@ func (m *OllamaChatModel) Chat(ctx context.Context, messages []openai.ChatComple
 			Role    string `json:"role"`
 			Content string `json:"content"`
 		} `json:"message"`
-		Done bool `json:"done"`
+		Done               bool   `json:"done"`
+		DoneReason         string `json:"done_reason"`
+		PromptEvalCount    int    `json:"prompt_eval_count"`
+		EvalCount          int    `json:"eval_count"`
+		TotalDuration      int    `json:"total_duration"`
+		LoadDuration       int    `json:"load_duration"`
+		PromptEvalDuration int    `json:"prompt_eval_duration"`
+		EvalDuration       int    `json:"eval_duration"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&ollamaResp); err != nil {
@@ -110,6 +117,11 @@ func (m *OllamaChatModel) Chat(ctx context.Context, messages []openai.ChatComple
 			},
 		},
 		Model: m.model,
+		Usage: openai.Usage{
+			TotalTokens:      ollamaResp.PromptEvalCount + ollamaResp.EvalCount,
+			PromptTokens:     ollamaResp.PromptEvalCount,
+			CompletionTokens: ollamaResp.EvalCount,
+		},
 	}, nil
 }
 

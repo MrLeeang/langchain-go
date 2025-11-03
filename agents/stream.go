@@ -45,6 +45,7 @@ type StreamResponse struct {
 //	    }
 //	}
 func (a *Agent) Stream(message string) <-chan StreamResponse {
+	a.ResetTokenUsage()
 	return a.StreamWithContext(a.ctx, message)
 }
 
@@ -60,6 +61,13 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 			Content: message,
 		}
 		a.messages = append(a.messages, userMsg)
+
+		// Calculate prompt token usage for all messages
+		for _, msg := range a.messages {
+			if msg.Role == openai.ChatMessageRoleUser || msg.Role == openai.ChatMessageRoleSystem {
+				a.CalculatePromptTokenUsage(msg.Content)
+			}
+		}
 
 		// Save user message to memory
 		if a.mem != nil && a.conversationID != "" {
@@ -161,6 +169,8 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 				if a.mem != nil && a.conversationID != "" {
 					_ = a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{assistantMsg})
 				}
+
+				a.CalculateCompletionTokenUsage(fullContent)
 
 				// Check if this is a final answer or tool call
 				_, shouldContinue, err := a.handleStreamResponse(ctx, ch, fullContent)

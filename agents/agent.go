@@ -13,13 +13,16 @@ import (
 // Agent represents a ReAct-style agent that can use tools to answer questions.
 // It maintains a conversation history and can iteratively use tools to gather information.
 type Agent struct {
-	ctx            context.Context
-	llm            llms.LLM
-	tools          []mcp.Tool
-	messages       []openai.ChatCompletionMessage
-	maxIter        int
-	mem            memory.Memory
-	conversationID string
+	ctx              context.Context
+	llm              llms.LLM
+	tools            []mcp.Tool
+	messages         []openai.ChatCompletionMessage
+	maxIter          int
+	mem              memory.Memory
+	conversationID   string
+	TotalTokens      int
+	PromptTokens     int
+	CompletionTokens int
 }
 
 // CreateReactAgent creates a new ReAct-style agent with the given LLM.
