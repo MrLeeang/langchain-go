@@ -34,7 +34,7 @@ func NewRedisMemory(ttl time.Duration) *RedisMemory {
 // LoadMessages loads conversation history from Redis.
 func (m *RedisMemory) LoadMessages(ctx context.Context, conversationID string) ([]openai.ChatCompletionMessage, error) {
 	key := fmt.Sprintf("conversation:%s:messages", conversationID)
-	
+
 	data, exists := m.storage[key]
 	if !exists {
 		return []openai.ChatCompletionMessage{}, nil
@@ -76,7 +76,7 @@ func (m *RedisMemory) SaveMessages(ctx context.Context, conversationID string, m
 // ClearMessages clears all messages for the conversation ID.
 func (m *RedisMemory) ClearMessages(ctx context.Context, conversationID string) error {
 	key := fmt.Sprintf("conversation:%s:messages", conversationID)
-	
+
 	// In a real Redis implementation, you would use:
 	// return redisClient.Del(ctx, key).Err()
 	delete(m.storage, key)
@@ -95,7 +95,7 @@ func main() {
 	}
 
 	// Create LLM instance
-	llm := llms.NewOpenAIChatModel(llms.Config{
+	llm := llms.NewOpenAIModel(llms.Config{
 		BaseURL: "https://api.openai.com/v1",
 		APIKey:  apiKey,
 		Model:   "gpt-3.5-turbo",
@@ -136,4 +136,3 @@ func main() {
 	fmt.Println("Note: In production with real Redis, conversation history")
 	fmt.Println("would persist across application restarts.")
 }
-

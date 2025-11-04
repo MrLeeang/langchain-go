@@ -19,3 +19,10 @@ type ChatStreamer interface {
 	// ChatStream sends a chat completion request and returns a stream of responses.
 	ChatStream(ctx context.Context, messages []openai.ChatCompletionMessage) (*openai.ChatCompletionStream, error)
 }
+
+// Embedder is an interface for models that support generating embeddings.
+type Embedder interface {
+	// CreateEmbeddings creates embeddings for the given input using the embedding model.
+	// The input can be a slice of strings or a slice of token slices.
+	Embeddings(ctx context.Context, inputs []string) ([]float32, error)
+}

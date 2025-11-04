@@ -38,7 +38,7 @@ func main() {
     ctx := context.Background()
     
     // Create LLM instance
-    llm := llms.NewOpenAIChatModel(llms.Config{
+    llm := llms.NewOpenAIModel(llms.Config{
         BaseURL: "https://api.openai.com/v1",
         APIKey:  os.Getenv("OPENAI_API_KEY"),
         Model:   "gpt-3.5-turbo",
@@ -168,7 +168,7 @@ agent := agents.CreateReactAgent(ctx, llm,
 
 ```go
 // No API key needed!
-llm := llms.NewOllamaChatModel(llms.Config{
+llm := llms.NewOllamaModel(llms.Config{
     BaseURL: "http://localhost:11434", // Default Ollama endpoint
     Model:   "llama2",                  // or "mistral", "codellama", etc.
 })
@@ -213,8 +213,8 @@ go run ./examples/simple-run
 
 ### LLMs
 
-- `llms.NewOpenAIChatModel(config)` - Create OpenAI-compatible LLM
-- `llms.NewOllamaChatModel(config)` - Create Ollama LLM
+- `llms.NewOpenAIModel(config)` - Create OpenAI-compatible LLM
+- `llms.NewOllamaModel(config)` - Create Ollama LLM
 
 ### Memory
 

@@ -34,7 +34,7 @@ type Agent struct {
 //
 // Example:
 //
-//	llm := llms.NewOpenAIChatModel(llms.Config{...})
+//	llm := llms.NewOpenAIModel(llms.Config{...})
 //	tools, _ := mcp.InitializeMCP(ctx, configs)
 //	agent := agents.CreateReactAgent(ctx, llm,
 //	    agents.WithTools(tools),

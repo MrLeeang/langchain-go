@@ -21,7 +21,7 @@ func main() {
 	}
 
 	// Create LLM instance that supports streaming
-	llm := llms.NewOpenAIChatModel(llms.Config{
+	llm := llms.NewOpenAIModel(llms.Config{
 		BaseURL: "https://api.openai.com/v1",
 		APIKey:  apiKey,
 		Model:   "gpt-3.5-turbo",
@@ -54,4 +54,3 @@ func main() {
 		}
 	}
 }
-

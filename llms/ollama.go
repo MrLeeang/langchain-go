@@ -12,29 +12,29 @@ import (
 	openai "github.com/sashabaranov/go-openai"
 )
 
-// OllamaChatModel is an implementation of the LLM interface using Ollama's API.
+// OllamaModel is an implementation of the LLM interface using Ollama's API.
 // Ollama is a tool for running large language models locally.
-type OllamaChatModel struct {
+type OllamaModel struct {
 	baseURL string
 	model   string
 	client  *http.Client
 }
 
-// NewOllamaChatModel creates a new Ollama chat model instance.
+// NewOllamaModel creates a new Ollama chat model instance.
 //
 // Example:
 //
-//	llm := llms.NewOllamaChatModel(llms.Config{
+//	llm := llms.NewOllamaModel(llms.Config{
 //	    BaseURL: "http://localhost:11434",
 //	    Model:   "llama2",
 //	})
-func NewOllamaChatModel(cfg Config) *OllamaChatModel {
+func NewOllamaModel(cfg Config) *OllamaModel {
 	baseURL := cfg.BaseURL
 	if baseURL == "" {
 		baseURL = "http://localhost:11434"
 	}
 
-	return &OllamaChatModel{
+	return &OllamaModel{
 		baseURL: baseURL,
 		model:   cfg.Model,
 		client:  &http.Client{},
@@ -42,7 +42,7 @@ func NewOllamaChatModel(cfg Config) *OllamaChatModel {
 }
 
 // Chat sends a chat completion request to Ollama and returns the response.
-func (m *OllamaChatModel) Chat(ctx context.Context, messages []openai.ChatCompletionMessage) (openai.ChatCompletionResponse, error) {
+func (m *OllamaModel) Chat(ctx context.Context, messages []openai.ChatCompletionMessage) (openai.ChatCompletionResponse, error) {
 	// Convert OpenAI messages to Ollama format
 	ollamaMessages := make([]map[string]interface{}, 0, len(messages))
 	for _, msg := range messages {
@@ -125,6 +125,13 @@ func (m *OllamaChatModel) Chat(ctx context.Context, messages []openai.ChatComple
 	}, nil
 }
 
+// Embeddings creates embeddings for the given input using the embedding model.
+// return the embedding vector of the input.
+func (m *OllamaModel) Embeddings(ctx context.Context, inputs []string) ([]float32, error) {
+	// TODO: implement ollama embeddings
+	return nil, errors.New("ollama embeddings not yet implemented")
+}
+
 // ChatStream sends a chat completion request and returns a stream of responses.
 // Note: Ollama streaming API format is different from OpenAI's format.
 // Currently, this method is not implemented. The agent will automatically
@@ -132,7 +139,7 @@ func (m *OllamaChatModel) Chat(ctx context.Context, messages []openai.ChatComple
 //
 // To enable streaming in the future, an adapter would need to be created
 // to convert Ollama's streaming format to OpenAI's ChatCompletionStream format.
-func (m *OllamaChatModel) ChatStream(ctx context.Context, messages []openai.ChatCompletionMessage) (*openai.ChatCompletionStream, error) {
+func (m *OllamaModel) ChatStream(ctx context.Context, messages []openai.ChatCompletionMessage) (*openai.ChatCompletionStream, error) {
 	// Return error to indicate streaming is not supported
 	// The agent will automatically fallback to Chat() method
 	return nil, errors.New("ollama streaming not yet implemented - will fallback to non-streaming")
