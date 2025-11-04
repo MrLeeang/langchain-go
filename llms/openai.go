@@ -57,7 +57,7 @@ func (m *OpenAIModel) ChatStream(ctx context.Context, messages []openai.ChatComp
 
 // Embeddings creates embeddings for the given input using the embedding model.
 // return the embedding vector of the input.
-func (m *OpenAIModel) Embeddings(ctx context.Context, inputs []string) ([]float32, error) {
+func (m *OpenAIModel) Embeddings(ctx context.Context, inputs []string) ([][]float32, error) {
 
 	req := openai.EmbeddingRequest{
 		Model: openai.EmbeddingModel(m.model),
@@ -73,7 +73,12 @@ func (m *OpenAIModel) Embeddings(ctx context.Context, inputs []string) ([]float3
 		return nil, fmt.Errorf("未返回嵌入数据")
 	}
 
-	return resp.Data[0].Embedding, nil
+	results := make([][]float32, len(resp.Data))
+	for i, data := range resp.Data {
+		results[i] = data.Embedding
+	}
+
+	return results, nil
 }
 
 // NewOpenAIModelWithParams creates a new OpenAI chat model using individual parameters.

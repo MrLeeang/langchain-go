@@ -21,8 +21,8 @@ func main() {
 	// Create Ollama LLM instance
 	// No API key needed! Ollama runs locally.
 	llm := llms.NewOllamaModel(llms.Config{
-		BaseURL: "http://localhost:11434", // Default Ollama endpoint
-		Model:   "llama2",                 // Or "mistral", "codellama", etc.
+		BaseURL: "http://localhost:11434/api", // Default Ollama endpoint
+		Model:   "llama2",                     // Or "mistral", "codellama", etc.
 	})
 
 	// Create memory for conversation history

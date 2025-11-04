@@ -64,7 +64,6 @@ func main() {
 		CollectionName:          "langchain_memory_example",
 		EmbeddingDim:            1536, // text-embedding-ada-002 dimension
 		Embedder:                embedder,
-		ConversationID:          "example-conversation",
 		EnableQueryBasedLoading: true, // Enable semantic search
 		MaxRelevantMessages:     5,    // Retrieve top 5 relevant messages
 	})

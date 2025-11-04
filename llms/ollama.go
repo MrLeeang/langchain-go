@@ -127,9 +127,52 @@ func (m *OllamaModel) Chat(ctx context.Context, messages []openai.ChatCompletion
 
 // Embeddings creates embeddings for the given input using the embedding model.
 // return the embedding vector of the input.
-func (m *OllamaModel) Embeddings(ctx context.Context, inputs []string) ([]float32, error) {
+func (m *OllamaModel) Embeddings(ctx context.Context, inputs []string) ([][]float32, error) {
 	// TODO: implement ollama embeddings
-	return nil, errors.New("ollama embeddings not yet implemented")
+	url := fmt.Sprintf("%s/v1/embeddings", m.baseURL)
+	body := map[string]interface{}{
+		"model": m.model,
+		"input": inputs,
+	}
+
+	jsonData, err := json.Marshal(body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := m.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("ollama API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	var ollamaResp struct {
+		Data []struct {
+			Embedding []float32 `json:"embedding"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&ollamaResp); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	if len(ollamaResp.Data) == 0 {
+		return nil, fmt.Errorf("no data returned")
+	}
+
+	results := make([][]float32, len(ollamaResp.Data))
+	for i, data := range ollamaResp.Data {
+		results[i] = data.Embedding
+	}
+	return results, nil
 }
 
 // ChatStream sends a chat completion request and returns a stream of responses.

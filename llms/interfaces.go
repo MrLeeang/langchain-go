@@ -24,5 +24,5 @@ type ChatStreamer interface {
 type Embedder interface {
 	// CreateEmbeddings creates embeddings for the given input using the embedding model.
 	// The input can be a slice of strings or a slice of token slices.
-	Embeddings(ctx context.Context, inputs []string) ([]float32, error)
+	Embeddings(ctx context.Context, inputs []string) ([][]float32, error)
 }

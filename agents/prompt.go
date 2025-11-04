@@ -8,7 +8,7 @@ import (
 
 // buildSystemPrompt constructs the system prompt for the agent.
 func buildSystemPrompt(tools []mcp.Tool) string {
-	prompt := `You are an AI assistant. When you need external tools to complete a user request, you must return ONLY a valid JSON object (without any additional explanations) in the following format:
+	prompt := `You are an AI assistant.When you need external tools to complete a user request, you must return ONLY a valid JSON object (without any additional explanations) in the following format:
 1) To call a tool, return:
 {"action":"call_tool","tool":"<tool_name>","args":{...}}
 2) Directly output the answer

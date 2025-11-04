@@ -8,6 +8,7 @@ import (
 	"io"
 
 	"github.com/MrLeeang/langchain-go/llms"
+	"github.com/MrLeeang/langchain-go/memory"
 
 	openai "github.com/sashabaranov/go-openai"
 )
@@ -46,6 +47,9 @@ type StreamResponse struct {
 //	}
 func (a *Agent) Stream(message string) <-chan StreamResponse {
 	a.ResetTokenUsage()
+	if a.mem != nil && a.mem.(memory.MilvusMemoryInterface) != nil {
+		a.mem.(memory.MilvusMemoryInterface).SetQuery(message)
+	}
 	return a.StreamWithContext(a.ctx, message)
 }
 

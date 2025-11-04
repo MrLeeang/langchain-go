@@ -11,6 +11,10 @@ import (
 	openai "github.com/sashabaranov/go-openai"
 )
 
+type MilvusMemoryInterface interface {
+	SetQuery(query string)
+}
+
 // MilvusMemory is a memory implementation that uses Milvus vector database
 // to store and retrieve conversation messages based on embeddings.
 // It implements both Memory and ConversationMemory interfaces.
@@ -19,7 +23,6 @@ type MilvusMemory struct {
 	embedder       EmbedderInterface
 	collectionName string
 	embeddingDim   int
-	conversationID string
 	// EnableQueryBasedLoading enables query-based loading in LoadMessages.
 	// When enabled, LoadMessages will use the latest user input to retrieve relevant messages.
 	EnableQueryBasedLoading bool
@@ -60,9 +63,6 @@ type MilvusConfig struct {
 
 	// Embedder is the embedding model interface.
 	Embedder EmbedderInterface
-
-	// ConversationID is the default conversation ID to use.
-	ConversationID string
 
 	// EnableQueryBasedLoading enables query-based loading in LoadMessages.
 	// When enabled, LoadMessages will use vector similarity search to retrieve
@@ -131,7 +131,6 @@ func NewMilvusMemory(cfg MilvusConfig) (*MilvusMemory, error) {
 		embedder:                cfg.Embedder,
 		collectionName:          collectionName,
 		embeddingDim:            cfg.EmbeddingDim,
-		conversationID:          cfg.ConversationID,
 		EnableQueryBasedLoading: cfg.EnableQueryBasedLoading,
 		MaxRelevantMessages:     maxRelevant,
 	}
@@ -234,9 +233,7 @@ func (m *MilvusMemory) getConversationID(conversationID string) string {
 	if conversationID != "" {
 		return conversationID
 	}
-	if m.conversationID != "" {
-		return m.conversationID
-	}
+
 	return "default"
 }
 
@@ -487,7 +484,13 @@ func (m *MilvusMemory) GetRelevantMessages(ctx context.Context, conversationID s
 	// Convert query vector to entity.Vector
 	vectors := []entity.Vector{entity.FloatVector(queryVector)}
 
-	// Search for similar Q&A pairs - use nil for search params to use defaults
+	// Create default search parameters
+	searchParam, err := entity.NewIndexFlatSearchParam()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create search param: %w", err)
+	}
+
+	// Search for similar Q&A pairs
 	searchResults, err := m.milvusClient.Search(
 		ctx,
 		m.collectionName,
@@ -498,7 +501,7 @@ func (m *MilvusMemory) GetRelevantMessages(ctx context.Context, conversationID s
 		"embedding",
 		entity.L2,
 		limit,
-		nil, // Use default search parameters
+		searchParam,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search Milvus: %w", err)
@@ -598,14 +601,11 @@ func (m *MilvusMemory) Close() error {
 // EmbedderWrapper wraps embedding models that have an Embeddings method.
 // It handles both single-input methods and batch processing.
 type EmbedderWrapper struct {
-	// embedderSingle supports models with Embeddings(ctx, []string) ([]float32, error)
+	// embedderSingle supports models with Embeddings(ctx, []string) ([][]float32, error)
 	embedderSingle interface {
-		Embeddings(ctx context.Context, inputs []string) ([]float32, error)
+		Embeddings(ctx context.Context, inputs []string) ([][]float32, error)
 	}
-	// embedderBatch supports models with CreateEmbeddings method
-	embedderBatch interface {
-		CreateEmbeddings(ctx context.Context, req openai.EmbeddingRequestConverter) (openai.EmbeddingResponse, error)
-	}
+
 	model string
 }
 
@@ -620,7 +620,7 @@ type EmbedderWrapper struct {
 //	openaiModel := llms.NewOpenAIModel(llms.Config{...})
 //	embedder := memory.NewEmbedderWrapperFromEmbeddings(openaiModel)
 func NewEmbedderWrapperFromEmbeddings(embedder interface {
-	Embeddings(ctx context.Context, inputs []string) ([]float32, error)
+	Embeddings(ctx context.Context, inputs []string) ([][]float32, error)
 }) *EmbedderWrapper {
 	return &EmbedderWrapper{embedderSingle: embedder}
 }
@@ -632,39 +632,15 @@ func (w *EmbedderWrapper) Embeddings(ctx context.Context, inputs []string) ([][]
 		return nil, nil
 	}
 
-	// Use batch method if available (more efficient)
-	if w.embedderBatch != nil {
-		req := openai.EmbeddingRequestStrings{
-			Input: inputs,
-			Model: openai.EmbeddingModel(w.model),
-		}
-
-		resp, err := w.embedderBatch.CreateEmbeddings(ctx, req)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create embeddings: %w", err)
-		}
-
-		results := make([][]float32, len(resp.Data))
-		for i, data := range resp.Data {
-			results[i] = data.Embedding
-		}
-
-		return results, nil
-	}
-
 	// Fallback to single-input method (less efficient, processes one by one)
 	if w.embedderSingle != nil {
-		results := make([][]float32, 0, len(inputs))
 
-		for _, input := range inputs {
-			embedding, err := w.embedderSingle.Embeddings(ctx, []string{input})
-			if err != nil {
-				return nil, fmt.Errorf("failed to generate embedding for input: %w", err)
-			}
-			results = append(results, embedding)
+		embedding, err := w.embedderSingle.Embeddings(ctx, inputs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate embedding for input: %w", err)
 		}
 
-		return results, nil
+		return embedding, nil
 	}
 
 	return nil, fmt.Errorf("no embedder configured")

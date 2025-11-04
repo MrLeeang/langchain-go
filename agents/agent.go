@@ -63,11 +63,13 @@ func CreateReactAgent(ctx context.Context, llm llms.LLM, opts ...AgentOption) *A
 		}
 	}
 
-	systemPrompt := buildSystemPrompt(agent.tools)
-	agent.messages = append(agent.messages, openai.ChatCompletionMessage{
-		Role:    openai.ChatMessageRoleSystem,
-		Content: systemPrompt,
-	})
+	if len(agent.tools) > 0 {
+		systemPrompt := buildSystemPrompt(agent.tools)
+		agent.messages = append(agent.messages, openai.ChatCompletionMessage{
+			Role:    openai.ChatMessageRoleSystem,
+			Content: systemPrompt,
+		})
+	}
 
 	return agent
 }
