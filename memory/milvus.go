@@ -342,7 +342,16 @@ func (m *MilvusMemory) assembleMessagesFromColumns(results []entity.Column) ([]o
 	return messages, nil
 }
 
-var currentUserInput string
+// use conversationID to store the latest user input
+var latestUserInput map[string]string
+
+func init() {
+	latestUserInput = make(map[string]string)
+}
+
+func (m *MilvusMemory) SetLatestUserInput(conversationID string, userInput string) {
+	latestUserInput[conversationID] = userInput
+}
 
 // SaveMessages saves messages to the conversation history.
 // It pairs user messages with assistant messages and stores them as Q&A pairs in Milvus.
@@ -376,16 +385,16 @@ func (m *MilvusMemory) SaveMessages(ctx context.Context, conversationID string, 
 
 			// If we have a previous user input without output, we'll store it with empty output
 			// Otherwise, start a new pair
-			currentUserInput = msg.Content
+			m.SetLatestUserInput(conversationID, msg.Content)
 		case openai.ChatMessageRoleAssistant:
 			// If we have a user input, pair it with this assistant response
-			if currentUserInput != "" && msg.Content != "" {
+			if latestUserInput[conversationID] != "" && msg.Content != "" {
 				pairs = append(pairs, QAPair{
-					userInput: currentUserInput,
+					userInput: latestUserInput[conversationID],
 					llmOutput: msg.Content,
 					timestamp: time.Now().UnixNano(),
 				})
-				currentUserInput = "" // Reset after pairing
+				m.SetLatestUserInput(conversationID, "") // Reset after pairing
 			}
 		case openai.ChatMessageRoleSystem:
 			// System messages are handled separately, skip for now
