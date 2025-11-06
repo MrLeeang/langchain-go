@@ -167,8 +167,14 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 								toolJSONStartFound = true
 							} else {
 								// not found, output one character to slide
-								ch <- StreamResponse{Content: buffer[:1]}
-								buffer = buffer[1:]
+								bufferRunes := []rune(buffer)
+								flagRunes := []rune(flag)
+
+								if len(bufferRunes) > len(flagRunes) {
+									ch <- StreamResponse{Content: string(bufferRunes[:len(bufferRunes)-len(flagRunes)])}
+									buffer = string(bufferRunes[len(bufferRunes)-len(flagRunes):])
+								}
+
 							}
 						}
 
