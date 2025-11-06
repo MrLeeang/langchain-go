@@ -22,9 +22,6 @@ type StreamResponse struct {
 	// Content is the text content in this chunk.
 	Content string
 
-	// FullContent is the full content of the response.
-	FullContent string
-
 	// Done indicates whether the stream is complete.
 	Done bool
 
