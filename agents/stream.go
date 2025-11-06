@@ -155,7 +155,7 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 						idx := strings.Index(buffer, `{"action"`)
 						if idx == -1 {
 							// No JSON start yet; if buffer is getting long, flush progressively
-							if len(buffer) > 70 {
+							if len(buffer) > 100 {
 								ch <- StreamResponse{Content: buffer}
 								buffer = ""
 								isAssistantContent = true
