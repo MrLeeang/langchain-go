@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/MrLeeang/langchain-go/llms"
 	"github.com/MrLeeang/langchain-go/memory"
@@ -118,6 +119,10 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 
 			buffer := ""
 			isAssistantContent := false
+			toolJSONStartFound := false
+			braceCount := 0
+			inString := false
+			escape := false
 
 			for {
 				response, err := stream.Recv()
@@ -139,26 +144,88 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 					content := response.Choices[0].Delta.Content
 					fullContent += content
 
+					// If we've already determined it's plain assistant text, stream through
 					if isAssistantContent {
 						ch <- StreamResponse{Content: content}
 						continue
 					}
-					// LLM returned raw data
-					// use buffer to find {"action"
+
+					// Accumulate and detect tool JSON that may start mid-stream
 					buffer += content
 
-					if len(buffer) < 9 {
-						continue
+					// If we haven't started parsing JSON yet, look for the start marker
+					if !toolJSONStartFound {
+						idx := strings.Index(buffer, `{"action"`)
+						if idx == -1 {
+							// No JSON start yet; if buffer is getting long, flush progressively
+							if len(buffer) > 1024 {
+								ch <- StreamResponse{Content: buffer}
+								buffer = ""
+								isAssistantContent = true
+							}
+							continue
+						}
+
+						// Emit any narration before the JSON
+						if idx > 0 {
+							ch <- StreamResponse{Content: buffer[:idx]}
+						}
+						// Keep only the JSON part in buffer going forward
+						buffer = buffer[idx:]
+						toolJSONStartFound = true
+						// initialize brace count by scanning current buffer
+						braceCount = 0
+						inString = false
+						escape = false
 					}
 
-					if buffer[0:9] == string(`{"action"`) {
-						// tool use found, return the tool use
-					} else {
-						ch <- StreamResponse{Content: buffer}
-						buffer = ""
-						isAssistantContent = true
+					// If we're inside a JSON tool payload, track braces until complete
+					if toolJSONStartFound {
+						for i := 0; i < len(content); i++ {
+							c := content[i]
+							if escape {
+								escape = false
+								continue
+							}
+							if c == '\\' && inString {
+								escape = true
+								continue
+							}
+							if c == '"' {
+								inString = !inString
+								continue
+							}
+							if inString {
+								continue
+							}
+							if c == '{' {
+								braceCount++
+							} else if c == '}' {
+								braceCount--
+								if braceCount == 0 {
+									// We have a complete JSON from start of buffer to here
+									// Find the corresponding end index in buffer
+									// Since buffer includes previous chunks, compute end as current total length up to now
+									// Simpler: attempt to unmarshal entire buffer; if fails, keep waiting
+									var tmp map[string]any
+									if err := json.Unmarshal([]byte(buffer), &tmp); err == nil {
+										// Handle tool call immediately
+										_, shouldContinue, herr := a.handleStreamResponse(ctx, ch, buffer)
+										if herr != nil {
+											ch <- StreamResponse{Error: herr}
+											return
+										}
+										// Stop reading more chunks for this iteration; tool handled
+										stream.Close()
+										if !shouldContinue {
+											ch <- StreamResponse{Done: true}
+										}
+										return
+									}
+								}
+							}
+						}
 					}
-
 				}
 			}
 
@@ -227,9 +294,22 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 		}
 	}
 
-	if err := json.Unmarshal([]byte(response), &resp); err != nil {
-		// If JSON parsing fails, treat the response as a final answer
+	// 找到response中的action为call_tool的json对象
+	callToolJson := ""
+	idx := strings.Index(response, `{"action":"call_tool"`)
+	if idx != -1 {
+		callToolJson = response[idx:]
+	}
+
+	if callToolJson == "" {
 		return response, false, nil
+	}
+
+	if callToolJson != "" {
+		err := json.Unmarshal([]byte(callToolJson), &resp)
+		if err != nil {
+			return response, false, nil
+		}
 	}
 
 	switch resp.Action {
@@ -244,7 +324,9 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 		// Send notification about tool call, json string
 
 		ch <- StreamResponse{Content: "\n"}
-		ch <- StreamResponse{Content: fmt.Sprintf(`{"action":"call_tool","tool":"%s","args":%v}`, resp.Tool, resp.Args)}
+		argsJson, _ := json.Marshal(resp.Args)
+		argsJsonStr := string(argsJson)
+		ch <- StreamResponse{Content: fmt.Sprintf(`{"action":"call_tool","tool":"%s","args":%s}`, resp.Tool, argsJsonStr)}
 
 		tool := a.findTool(resp.Tool)
 		if tool == nil {
@@ -263,7 +345,7 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 
 		// Send tool result through channel
 		ch <- StreamResponse{Content: "\n"}
-		resultMsg := fmt.Sprintf(`{"action":"tool_result","tool":"%s","result":"%s"}`, resp.Tool, toolResult)
+		resultMsg := fmt.Sprintf(`{"action":"tool_result","tool":"%s","result":%s, "args":%s}`, resp.Tool, toolResult, argsJsonStr)
 		ch <- StreamResponse{Content: resultMsg}
 		ch <- StreamResponse{Content: "\n"}
 
