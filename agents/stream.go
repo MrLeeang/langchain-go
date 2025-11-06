@@ -118,7 +118,6 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 			var fullContent string
 
 			buffer := ""
-			bufferSize := 0
 			isAssistantContent := false
 			toolJSONStartFound := false
 
@@ -150,7 +149,6 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 
 					// Accumulate and detect tool JSON that may start mid-stream
 					buffer += content
-					bufferSize += len(content)
 
 					// If we haven't started parsing JSON yet, look for the start marker
 					if !toolJSONStartFound {
@@ -167,20 +165,11 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 								// Keep only the JSON part in buffer going forward
 								buffer = buffer[idx:]
 								toolJSONStartFound = true
-								continue
+							} else {
+								// not found, output one character to slide
+								ch <- StreamResponse{Content: buffer[:1]}
+								buffer = buffer[1:]
 							}
-
-							// if buffer is too long, flush progressively
-							if bufferSize > a.maxBufferSize {
-								ch <- StreamResponse{Content: buffer}
-								buffer = ""
-								isAssistantContent = true
-								continue
-							}
-
-							// not found, output one character to slide
-							ch <- StreamResponse{Content: buffer[:1]}
-							buffer = buffer[1:]
 						}
 
 					}
@@ -190,6 +179,12 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 						// tool use found, return the tool use
 					}
 				}
+			}
+
+			if len(buffer) > 0 && !toolJSONStartFound {
+				// stream end but buffer is not empty, output the buffer
+				ch <- StreamResponse{Content: buffer}
+				buffer = ""
 			}
 
 			stream.Close()
