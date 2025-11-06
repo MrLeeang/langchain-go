@@ -52,8 +52,8 @@ func WithConversationID(conversationID string) AgentOption {
 
 // WithUseToolDataLength sets the length of the data that will be used to call the tool.
 // Default is 200.
-func WithUseToolDataLength(useToolDataLength int) AgentOption {
+func WithMaxBufferSize(maxBufferSize int) AgentOption {
 	return func(a *Agent) {
-		a.useToolDataLength = useToolDataLength
+		a.maxBufferSize = maxBufferSize
 	}
 }

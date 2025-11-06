@@ -13,18 +13,18 @@ import (
 // Agent represents a ReAct-style agent that can use tools to answer questions.
 // It maintains a conversation history and can iteratively use tools to gather information.
 type Agent struct {
-	ctx               context.Context
-	llm               llms.LLM
-	tools             []mcp.Tool
-	messages          []openai.ChatCompletionMessage
-	maxIter           int
-	mem               memory.Memory
-	conversationID    string
-	TotalTokens       int
-	PromptTokens      int
-	CompletionTokens  int
-	useToolDataLength int
-	debug             bool
+	ctx              context.Context
+	llm              llms.LLM
+	tools            []mcp.Tool
+	messages         []openai.ChatCompletionMessage
+	maxIter          int
+	mem              memory.Memory
+	conversationID   string
+	TotalTokens      int
+	PromptTokens     int
+	CompletionTokens int
+	maxBufferSize    int
+	debug            bool
 }
 
 // CreateReactAgent creates a new ReAct-style agent with the given LLM.
@@ -44,13 +44,13 @@ type Agent struct {
 //	)
 func CreateReactAgent(ctx context.Context, llm llms.LLM, opts ...AgentOption) *Agent {
 	agent := &Agent{
-		ctx:               ctx,
-		llm:               llm,
-		tools:             []mcp.Tool{}, // Default to empty tools
-		messages:          []openai.ChatCompletionMessage{},
-		maxIter:           10,
-		mem:               memory.NewBufferMemory(), // Default memory implementation
-		useToolDataLength: 200,
+		ctx:           ctx,
+		llm:           llm,
+		tools:         []mcp.Tool{}, // Default to empty tools
+		messages:      []openai.ChatCompletionMessage{},
+		maxIter:       10,
+		mem:           memory.NewBufferMemory(), // Default memory implementation
+		maxBufferSize: 200,
 	}
 
 	// Apply options

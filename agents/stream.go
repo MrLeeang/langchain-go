@@ -118,6 +118,7 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 			var fullContent string
 
 			buffer := ""
+			bufferSize := 0
 			isAssistantContent := false
 			toolJSONStartFound := false
 
@@ -149,31 +150,39 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 
 					// Accumulate and detect tool JSON that may start mid-stream
 					buffer += content
+					bufferSize += len(content)
 
 					// If we haven't started parsing JSON yet, look for the start marker
 					if !toolJSONStartFound {
-						idx := strings.Index(buffer, `{"action"`)
+						flag := `{"action"`
 
-						if a.debug {
-							fmt.Println("idx:", idx, "len(buffer):", len(buffer))
-						}
-						if idx == -1 {
-							// No JSON start yet; if buffer is getting long, flush progressively
-							if len(buffer) > a.useToolDataLength {
+						if len(buffer) > len(flag) {
+							idx := strings.Index(buffer, flag)
+							if idx != -1 {
+								// found JSON
+								if idx > 0 {
+									ch <- StreamResponse{Content: buffer[:idx]}
+								}
+
+								// Keep only the JSON part in buffer going forward
+								buffer = buffer[idx:]
+								toolJSONStartFound = true
+								continue
+							}
+
+							// if buffer is too long, flush progressively
+							if bufferSize > a.maxBufferSize {
 								ch <- StreamResponse{Content: buffer}
 								buffer = ""
 								isAssistantContent = true
+								continue
 							}
-							continue
+
+							// not found, output one character to slide
+							ch <- StreamResponse{Content: buffer[:1]}
+							buffer = buffer[1:]
 						}
 
-						// Emit any narration before the JSON
-						if idx > 0 {
-							ch <- StreamResponse{Content: buffer[:idx]}
-						}
-						// Keep only the JSON part in buffer going forward
-						buffer = buffer[idx:]
-						toolJSONStartFound = true
 					}
 
 					// If we're inside a JSON tool payload, track braces until complete
