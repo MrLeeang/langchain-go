@@ -50,8 +50,10 @@ type StreamResponse struct {
 //	}
 func (a *Agent) Stream(message string) <-chan StreamResponse {
 	a.ResetTokenUsage()
-	if a.mem != nil && a.mem.(memory.MilvusMemoryInterface) != nil {
-		a.mem.(memory.MilvusMemoryInterface).SetQuery(message)
+	if a.mem != nil {
+		if milvusMem, ok := a.mem.(memory.MilvusMemoryInterface); ok {
+			milvusMem.SetQuery(message)
+		}
 	}
 	return a.StreamWithContext(a.ctx, message)
 }

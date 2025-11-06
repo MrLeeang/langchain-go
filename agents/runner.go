@@ -12,8 +12,10 @@ import (
 // It handles tool calling iteratively until a final answer is reached or max iterations are exceeded.
 func (a *Agent) Run(message string) (string, error) {
 	a.ResetTokenUsage()
-	if a.mem != nil && a.mem.(memory.MilvusMemoryInterface) != nil {
-		a.mem.(memory.MilvusMemoryInterface).SetQuery(message)
+	if a.mem != nil {
+		if milvusMem, ok := a.mem.(memory.MilvusMemoryInterface); ok {
+			milvusMem.SetQuery(message)
+		}
 	}
 
 	return a.RunWithContext(a.ctx, message)
