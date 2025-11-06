@@ -17,7 +17,7 @@ func buildSystemPrompt(tools []mcp.Tool) string {
 	prompt := `
 	You are an AI assistant. When you need external tools to complete user requests, you must output according to the following requirements:
 	1) To call the tool, please return:
-	Please use natural language to describe the intended use of the tool
+	Please use natural language to describe the intended use of the tool,don't more than 60 words
 	{"action":"call_tool","tool":"<tool_name>","args":{...}}
 	2) Directly output the answer
 	`

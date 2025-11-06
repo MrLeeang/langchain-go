@@ -120,9 +120,6 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 			buffer := ""
 			isAssistantContent := false
 			toolJSONStartFound := false
-			braceCount := 0
-			inString := false
-			escape := false
 
 			for {
 				response, err := stream.Recv()
@@ -158,7 +155,7 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 						idx := strings.Index(buffer, `{"action"`)
 						if idx == -1 {
 							// No JSON start yet; if buffer is getting long, flush progressively
-							if len(buffer) > 1024 {
+							if len(buffer) > 70 {
 								ch <- StreamResponse{Content: buffer}
 								buffer = ""
 								isAssistantContent = true
@@ -173,58 +170,11 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 						// Keep only the JSON part in buffer going forward
 						buffer = buffer[idx:]
 						toolJSONStartFound = true
-						// initialize brace count by scanning current buffer
-						braceCount = 0
-						inString = false
-						escape = false
 					}
 
 					// If we're inside a JSON tool payload, track braces until complete
 					if toolJSONStartFound {
-						for i := 0; i < len(content); i++ {
-							c := content[i]
-							if escape {
-								escape = false
-								continue
-							}
-							if c == '\\' && inString {
-								escape = true
-								continue
-							}
-							if c == '"' {
-								inString = !inString
-								continue
-							}
-							if inString {
-								continue
-							}
-							if c == '{' {
-								braceCount++
-							} else if c == '}' {
-								braceCount--
-								if braceCount == 0 {
-									// We have a complete JSON from start of buffer to here
-									// Find the corresponding end index in buffer
-									// Since buffer includes previous chunks, compute end as current total length up to now
-									// Simpler: attempt to unmarshal entire buffer; if fails, keep waiting
-									var tmp map[string]any
-									if err := json.Unmarshal([]byte(buffer), &tmp); err == nil {
-										// Handle tool call immediately
-										_, shouldContinue, herr := a.handleStreamResponse(ctx, ch, buffer)
-										if herr != nil {
-											ch <- StreamResponse{Error: herr}
-											return
-										}
-										// Stop reading more chunks for this iteration; tool handled
-										stream.Close()
-										if !shouldContinue {
-											ch <- StreamResponse{Done: true}
-										}
-										return
-									}
-								}
-							}
-						}
+						// tool use found, return the tool use
 					}
 				}
 			}
