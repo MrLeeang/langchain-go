@@ -49,3 +49,11 @@ func WithConversationID(conversationID string) AgentOption {
 		a.conversationID = conversationID
 	}
 }
+
+// WithUseToolDataLength sets the length of the data that will be used to call the tool.
+// Default is 200.
+func WithUseToolDataLength(useToolDataLength int) AgentOption {
+	return func(a *Agent) {
+		a.useToolDataLength = useToolDataLength
+	}
+}
