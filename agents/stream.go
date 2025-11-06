@@ -153,7 +153,10 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 					// If we haven't started parsing JSON yet, look for the start marker
 					if !toolJSONStartFound {
 						idx := strings.Index(buffer, `{"action"`)
-						fmt.Println("idx:", idx, "len(buffer):", len(buffer))
+
+						if a.debug {
+							fmt.Println("idx:", idx, "len(buffer):", len(buffer))
+						}
 						if idx == -1 {
 							// No JSON start yet; if buffer is getting long, flush progressively
 							if len(buffer) > a.useToolDataLength {

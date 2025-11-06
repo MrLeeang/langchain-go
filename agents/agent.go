@@ -24,6 +24,7 @@ type Agent struct {
 	PromptTokens      int
 	CompletionTokens  int
 	useToolDataLength int
+	debug             bool
 }
 
 // CreateReactAgent creates a new ReAct-style agent with the given LLM.
