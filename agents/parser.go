@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/MrLeeang/langchain-go/mcp"
 
@@ -20,7 +21,20 @@ func (a *Agent) parseLLMResponse(ctx context.Context, response string) (string, 
 		Answer string                 `json:"answer,omitempty"`
 	}
 
-	if err := json.Unmarshal([]byte(response), &resp); err != nil {
+	// find call_tool action in response
+	callToolJson := ""
+	idx := strings.Index(response, `{"action":"call_tool"`)
+	if idx != -1 {
+		callToolJson = response[idx:]
+	}
+
+	if callToolJson == "" {
+		return response, false, nil
+	}
+
+	callToolJson = thoroughlyCleanJSON(callToolJson)
+
+	if err := json.Unmarshal([]byte(callToolJson), &resp); err != nil {
 		// If JSON parsing fails, treat the response as a final answer
 		return response, false, nil
 	}
@@ -73,4 +87,25 @@ func (a *Agent) findTool(name string) mcp.Tool {
 		}
 	}
 	return nil
+}
+
+func thoroughlyCleanJSON(jsonStr string) string {
+	// remove BOM
+	jsonStr = strings.TrimPrefix(jsonStr, "\ufeff")
+
+	// remove leading and trailing whitespace
+	jsonStr = strings.TrimSpace(jsonStr)
+
+	// find the end of the JSON structure
+	lastBrace := strings.LastIndex(jsonStr, "}")
+	lastBracket := strings.LastIndex(jsonStr, "]")
+	endPos := max(lastBrace, lastBracket)
+
+	if endPos != -1 {
+		// truncate to the end of the JSON structure
+		jsonStr = jsonStr[:endPos+1]
+	}
+
+	// remove leading and trailing whitespace again
+	return strings.TrimSpace(jsonStr)
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/MrLeeang/langchain-go/llms"
 	"github.com/MrLeeang/langchain-go/memory"
@@ -61,7 +62,11 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 	ch := make(chan StreamResponse, 10)
 
 	go func() {
-		defer close(ch)
+
+		defer func() {
+			time.Sleep(1 * time.Second)
+			close(ch)
+		}()
 
 		userMsg := openai.ChatCompletionMessage{
 			Role:    openai.ChatMessageRoleUser,
@@ -103,8 +108,20 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 				}
 
 				output := resp.Choices[0].Message.Content
-				a.handleLLMResponse(ctx, ch, output)
-				return
+				result, shouldContinue, err := a.handleLLMResponse(ctx, output)
+				if err != nil {
+					ch <- StreamResponse{Error: err}
+					return
+				}
+
+				if !shouldContinue {
+					ch <- StreamResponse{Done: true}
+					return
+				}
+
+				if result != "" {
+					ch <- StreamResponse{Content: result}
+				}
 			}
 
 			// Use streaming
@@ -141,6 +158,11 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 					content := response.Choices[0].Delta.Content
 					fullContent += content
 
+					if a.debug {
+						ch <- StreamResponse{Content: content}
+						continue
+					}
+
 					// If we've already determined it's plain assistant text, stream through
 					if isAssistantContent {
 						ch <- StreamResponse{Content: content}
@@ -165,6 +187,7 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 								// Keep only the JSON part in buffer going forward
 								buffer = buffer[idx:]
 								toolJSONStartFound = true
+
 							} else {
 								// not found, output one character to slide
 								bufferRunes := []rune(buffer)
@@ -195,22 +218,24 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 
 			stream.Close()
 
-			// Save assistant message to memory
+			// Process the complete response (handleStreamResponse will save the message)
 			if fullContent != "" {
-
-				assistantMsg := openai.ChatCompletionMessage{
-					Role:    openai.ChatMessageRoleAssistant,
-					Content: fullContent,
-				}
-				a.messages = append(a.messages, assistantMsg)
-
-				if a.mem != nil && a.conversationID != "" {
-					_ = a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{assistantMsg})
-				}
+				// if a.debug {
+				// 	fmt.Println("\n=============fullContent before handleStreamResponse============")
+				// 	fmt.Printf("fullContent length: %d\n", len(fullContent))
+				// 	fmt.Printf("fullContent preview (first 200 chars): %s\n", func() string {
+				// 		if len(fullContent) > 200 {
+				// 			return fullContent[:200] + "..."
+				// 		}
+				// 		return fullContent
+				// 	}())
+				// 	fmt.Println("=============fullContent before handleStreamResponse============")
+				// }
 
 				a.CalculateCompletionTokenUsage(fullContent)
 
 				// Check if this is a final answer or tool call
+				// handleStreamResponse will save the assistant message to memory
 				_, shouldContinue, err := a.handleStreamResponse(ctx, ch, fullContent)
 				if err != nil {
 					ch <- StreamResponse{Error: err}
@@ -258,7 +283,13 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 		}
 	}
 
-	// 找到response中的action为call_tool的json对象
+	// if a.debug {
+	// 	fmt.Println("\n=============handleStreamResponse============")
+	// 	fmt.Println("handleStreamResponse: ", response)
+	// 	fmt.Println("=============handleStreamResponse============")
+	// }
+
+	// find call_tool action in response
 	callToolJson := ""
 	idx := strings.Index(response, `{"action":"call_tool"`)
 	if idx != -1 {
@@ -266,12 +297,22 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 	}
 
 	if callToolJson == "" {
+		// if a.debug {
+		// 	fmt.Println("\ncallToolJson is empty: ", response)
+		// }
 		return response, false, nil
 	}
+
+	callToolJson = thoroughlyCleanJSON(callToolJson)
 
 	if callToolJson != "" {
 		err := json.Unmarshal([]byte(callToolJson), &resp)
 		if err != nil {
+			// if a.debug {
+			// 	fmt.Println("=============unmarshalling============")
+			// 	fmt.Println("error unmarshalling callToolJson: ", err, ", callToolJson: ", callToolJson)
+			// 	fmt.Println("=============unmarshalling============")
+			// }
 			return response, false, nil
 		}
 	}
@@ -282,35 +323,41 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 
 	case "call_tool":
 		if resp.Tool == "" {
+			// if a.debug {
+			// 	fmt.Println("\ntool name is required for call_tool action")
+			// }
 			return "", false, fmt.Errorf("tool name is required for call_tool action")
 		}
+
+		callToolResult := a.newCallToolResult(resp.Tool, resp.Args)
 
 		// Send notification about tool call, json string
 
 		ch <- StreamResponse{Content: "\n"}
-		argsJson, _ := json.Marshal(resp.Args)
-		argsJsonStr := string(argsJson)
-		ch <- StreamResponse{Content: fmt.Sprintf(`{"action":"call_tool","tool":"%s","args":%s}`, resp.Tool, argsJsonStr)}
+		ch <- StreamResponse{Content: callToolJson}
 
 		tool := a.findTool(resp.Tool)
 		if tool == nil {
 			ch <- StreamResponse{Content: "\n"}
-			ch <- StreamResponse{Content: fmt.Sprintf(`{"action":"error","message":"tool '%s' not found"}`, resp.Tool)}
+			callToolResult.Error = true
+			callToolResult.Message = fmt.Sprintf("tool '%s' not found", resp.Tool)
+			ch <- StreamResponse{Content: callToolResult.String()}
 			return "", false, fmt.Errorf("tool not found: %s", resp.Tool)
 		}
 
 		toolResult, err := tool.Call(ctx, resp.Args)
 		if err != nil {
-			errorMsg := fmt.Sprintf(`{"action":"error","message":"Tool '%s' call failed: %v"}`, resp.Tool, err)
+			callToolResult.Error = true
+			callToolResult.Message = fmt.Sprintf("tool call failed for %s: %v", resp.Tool, err)
 			ch <- StreamResponse{Content: "\n"}
-			ch <- StreamResponse{Content: errorMsg}
+			ch <- StreamResponse{Content: callToolResult.String()}
 			return "", false, fmt.Errorf("tool call failed for %s: %w", resp.Tool, err)
 		}
 
 		// Send tool result through channel
 		ch <- StreamResponse{Content: "\n"}
-		resultMsg := fmt.Sprintf(`{"action":"tool_result","tool":"%s","result":%s, "args":%s}`, resp.Tool, toolResult, argsJsonStr)
-		ch <- StreamResponse{Content: resultMsg}
+		callToolResult.Result = toolResult
+		ch <- StreamResponse{Content: callToolResult.String()}
 		ch <- StreamResponse{Content: "\n"}
 
 		// Add tool result to conversation and continue
@@ -335,7 +382,7 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 }
 
 // handleLLMResponse handles a complete LLM response (non-streaming fallback).
-func (a *Agent) handleLLMResponse(ctx context.Context, ch chan<- StreamResponse, output string) {
+func (a *Agent) handleLLMResponse(ctx context.Context, output string) (string, bool, error) {
 	assistantMsg := openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleAssistant,
 		Content: output,
@@ -347,25 +394,34 @@ func (a *Agent) handleLLMResponse(ctx context.Context, ch chan<- StreamResponse,
 		_ = a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{assistantMsg})
 	}
 
-	result, shouldContinue, err := a.parseLLMResponse(ctx, output)
-	if err != nil {
-		ch <- StreamResponse{Error: err}
-		return
-	}
+	return a.parseLLMResponse(ctx, output)
+}
 
-	if !shouldContinue {
-		if result != "" {
-			ch <- StreamResponse{Content: result}
-		}
-		ch <- StreamResponse{Done: true}
-		return
-	}
+// call tool result data
+type callToolResult struct {
+	Action  string                 `json:"action"`
+	Tool    string                 `json:"tool"`
+	Args    map[string]interface{} `json:"args"`
+	Result  string                 `json:"result"`
+	Error   bool                   `json:"error"`
+	Message string                 `json:"message"`
+}
 
-	// Tool call detected - use handleStreamResponse to properly handle it
-	_, _, err = a.handleStreamResponse(ctx, ch, output)
+func (c *callToolResult) String() string {
+	json, err := json.Marshal(c)
 	if err != nil {
-		ch <- StreamResponse{Error: err}
-		return
+		return ""
 	}
-	ch <- StreamResponse{Done: true}
+	return string(json)
+}
+
+func (a *Agent) newCallToolResult(tool string, args map[string]interface{}) *callToolResult {
+	return &callToolResult{
+		Action:  "tool_result",
+		Tool:    tool,
+		Args:    args,
+		Result:  "",
+		Error:   false,
+		Message: "",
+	}
 }
