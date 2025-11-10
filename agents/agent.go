@@ -67,7 +67,17 @@ func CreateReactAgent(ctx context.Context, llm llms.LLM, opts ...AgentOption) *A
 	}
 
 	// Load message
-	agent.LoadMessages("")
+	if agent.mem != nil && agent.conversationID != "" {
+		// Check if this is MilvusMemory with query-based loading enabled
+		// If so, skip loading here - it will be loaded when we have the user query
+		if _, ok := agent.mem.(*memory.MilvusMemory); ok {
+			// Skip loading - will be loaded in Run/Stream with user query
+		} else {
+			if history, err := agent.mem.LoadMessages(agent.ctx, agent.conversationID); err == nil && len(history) > 0 {
+				agent.messages = append(agent.messages, history...)
+			}
+		}
+	}
 
 	return agent
 }

@@ -49,7 +49,7 @@ type StreamResponse struct {
 func (a *Agent) Stream(message string) <-chan StreamResponse {
 	a.ResetTokenUsage()
 
-	a.LoadMessages(message)
+	a.ReloadMessages(message)
 
 	return a.StreamWithContext(a.ctx, message)
 }

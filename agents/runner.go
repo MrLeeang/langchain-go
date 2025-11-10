@@ -12,7 +12,7 @@ import (
 func (a *Agent) Run(message string) (string, error) {
 	a.ResetTokenUsage()
 
-	a.LoadMessages(message)
+	a.ReloadMessages(message)
 
 	return a.RunWithContext(a.ctx, message)
 }
