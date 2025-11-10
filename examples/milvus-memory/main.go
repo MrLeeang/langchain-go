@@ -90,7 +90,7 @@ func main() {
 	fmt.Println("=== First Interaction ===")
 	fmt.Println("Question: My name is Alice and I love programming in Python.")
 	input := "My name is Alice and I love programming in Python."
-	milvusMem.SetQuery(input)
+	// Note: SetQuery is now automatically called by the agent framework
 	response1, err := agent.Run(input)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)

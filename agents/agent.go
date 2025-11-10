@@ -58,14 +58,6 @@ func CreateReactAgent(ctx context.Context, llm llms.LLM, opts ...AgentOption) *A
 		opt(agent)
 	}
 
-	// Load conversation history from memory if available (before adding system prompt)
-	// This ensures system prompt is always last, which is typically the desired order
-	if agent.mem != nil && agent.conversationID != "" {
-		if history, err := agent.mem.LoadMessages(ctx, agent.conversationID); err == nil && len(history) > 0 {
-			agent.messages = append(agent.messages, history...)
-		}
-	}
-
 	if len(agent.tools) > 0 {
 		systemPrompt := buildSystemPrompt(agent.tools)
 		agent.messages = append(agent.messages, openai.ChatCompletionMessage{
@@ -73,6 +65,9 @@ func CreateReactAgent(ctx context.Context, llm llms.LLM, opts ...AgentOption) *A
 			Content: systemPrompt,
 		})
 	}
+
+	// Load message
+	agent.LoadMessages("")
 
 	return agent
 }

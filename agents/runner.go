@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/MrLeeang/langchain-go/memory"
 	openai "github.com/sashabaranov/go-openai"
 )
 
@@ -12,11 +11,8 @@ import (
 // It handles tool calling iteratively until a final answer is reached or max iterations are exceeded.
 func (a *Agent) Run(message string) (string, error) {
 	a.ResetTokenUsage()
-	if a.mem != nil {
-		if milvusMem, ok := a.mem.(memory.MilvusMemoryInterface); ok {
-			milvusMem.SetQuery(message)
-		}
-	}
+
+	a.LoadMessages(message)
 
 	return a.RunWithContext(a.ctx, message)
 }
