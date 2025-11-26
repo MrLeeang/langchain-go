@@ -3,7 +3,6 @@ package memory
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -158,7 +157,7 @@ func (m *MySQLMemory) LoadMessages(ctx context.Context, conversationID string) (
 		ORDER BY created_at ASC
 	`, tableName)
 
-	rows, err := db.QueryContext(ctx, query, convID)
+	rows, err := m.db.QueryContext(ctx, query, convID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query messages: %w", err)
 	}
@@ -195,7 +194,7 @@ func (m *MySQLMemory) SaveMessages(ctx context.Context, conversationID string, m
 	convID := m.getConversationID(conversationID)
 
 	// Begin a transaction for atomic insert
-	tx, err := db.BeginTx(ctx, nil)
+	tx, err := m.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
@@ -239,7 +238,7 @@ func (m *MySQLMemory) ClearMessages(ctx context.Context, conversationID string) 
 	convID := m.getConversationID(conversationID)
 
 	query := fmt.Sprintf("DELETE FROM %s WHERE conversation_id = ?", tableName)
-	_, err := db.ExecContext(ctx, query, convID)
+	_, err := m.db.ExecContext(ctx, query, convID)
 	if err != nil {
 		return fmt.Errorf("failed to delete messages: %w", err)
 	}
