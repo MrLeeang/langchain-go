@@ -48,6 +48,7 @@ type StreamResponse struct {
 //	}
 func (a *Agent) Stream(message string) <-chan StreamResponse {
 	a.ResetTokenUsage()
+	a.ResetDuration()
 
 	a.ReloadMessages(message)
 
@@ -59,8 +60,10 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 	ch := make(chan StreamResponse, 10)
 
 	go func() {
-
+		a.StartTime = time.Now()
 		defer func() {
+			a.EndTime = time.Now()
+			a.Duration = a.EndTime.Sub(a.StartTime)
 			time.Sleep(1 * time.Second)
 			close(ch)
 		}()

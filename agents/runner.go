@@ -3,6 +3,7 @@ package agents
 import (
 	"context"
 	"fmt"
+	"time"
 
 	openai "github.com/sashabaranov/go-openai"
 )
@@ -11,6 +12,7 @@ import (
 // It handles tool calling iteratively until a final answer is reached or max iterations are exceeded.
 func (a *Agent) Run(message string) (string, error) {
 	a.ResetTokenUsage()
+	a.ResetDuration()
 
 	a.ReloadMessages(message)
 
@@ -19,6 +21,12 @@ func (a *Agent) Run(message string) (string, error) {
 
 // RunWithContext processes a user message with a custom context and returns the agent's response.
 func (a *Agent) RunWithContext(ctx context.Context, message string) (string, error) {
+	a.StartTime = time.Now()
+	defer func() {
+		a.EndTime = time.Now()
+		a.Duration = a.EndTime.Sub(a.StartTime)
+	}()
+
 	userMsg := openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleUser,
 		Content: message,

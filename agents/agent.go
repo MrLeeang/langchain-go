@@ -2,6 +2,7 @@ package agents
 
 import (
 	"context"
+	"time"
 
 	"github.com/MrLeeang/langchain-go/llms"
 	"github.com/MrLeeang/langchain-go/mcp"
@@ -23,6 +24,9 @@ type Agent struct {
 	TotalTokens      int
 	PromptTokens     int
 	CompletionTokens int
+	Duration         time.Duration
+	StartTime        time.Time
+	EndTime          time.Time
 	maxBufferSize    int
 	debug            bool
 }
