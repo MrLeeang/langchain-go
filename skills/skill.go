@@ -128,10 +128,32 @@ func LoadFiles(files []string) ([]Skill, error) {
 	return result, nil
 }
 
+func LoadContents(contents []string) ([]Skill, error) {
+	var result []Skill
+
+	for _, content := range contents {
+		skill := parseSkill("", content)
+		result = append(result, skill)
+	}
+
+	return result, nil
+}
+
 // parseSkill parses a markdown file and extracts skill information.
 func parseSkill(filePath, content string) Skill {
 	// Extract name from filename (without extension)
-	name := strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
+	name := ""
+	if filePath != "" {
+		name = strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
+	}
+
+	lines := strings.Split(content, "\n")
+
+	// if name is empty, use the first line of the content as the name
+	if name == "" {
+		name = strings.Replace(lines[0], "#", "", 1)
+		name = strings.TrimSpace(name)
+	}
 
 	skill := Skill{
 		Name:    name,
@@ -139,7 +161,6 @@ func parseSkill(filePath, content string) Skill {
 	}
 
 	// Extract description from first paragraph or first header
-	lines := strings.Split(content, "\n")
 	var descriptionLines []string
 	var inCodeBlock bool
 
