@@ -266,8 +266,8 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 	var resp struct {
 		Action string                 `json:"action"`
 		Tool   string                 `json:"tool,omitempty"`
+		Skill  string                 `json:"skill,omitempty"`
 		Args   map[string]interface{} `json:"args,omitempty"`
-		Answer string                 `json:"answer,omitempty"`
 	}
 
 	// Save assistant message to memory first
@@ -289,9 +289,9 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 	// 	fmt.Println("=============handleStreamResponse============")
 	// }
 
-	// find call_tool action in response
+	// find action json in response
 	callToolJson := ""
-	idx := strings.Index(response, `{"action":"call_tool"`)
+	idx := strings.Index(response, `{"action":"`)
 	if idx != -1 {
 		callToolJson = response[idx:]
 	}
@@ -318,8 +318,35 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 	}
 
 	switch resp.Action {
-	case "final_answer":
-		return resp.Answer, false, nil
+	case "use_skill":
+		if resp.Skill == "" {
+			return "", false, fmt.Errorf("skill name is required for use_skill action")
+		}
+
+		// Execute the selected skill to get detailed instructions
+		instructions, err := a.ExecuteSkill(ctx, resp.Skill, resp.Args)
+		if err != nil {
+			return "", false, fmt.Errorf("failed to execute skill %s: %w", resp.Skill, err)
+		}
+
+		// Inject skill instructions as a new system message
+		skillMsg := openai.ChatCompletionMessage{
+			Role:    openai.ChatMessageRoleSystem,
+			Content: instructions,
+		}
+		a.messages = append(a.messages, skillMsg)
+
+		// Save skill instructions to memory
+		if a.mem != nil && a.conversationID != "" {
+			_ = a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{skillMsg})
+		}
+
+		// Optionally, send the skill instructions to the stream for transparency
+		ch <- StreamResponse{Content: "\n"}
+		ch <- StreamResponse{Content: instructions}
+		ch <- StreamResponse{Content: "\n"}
+
+		return "", true, nil
 
 	case "call_tool":
 		if resp.Tool == "" {

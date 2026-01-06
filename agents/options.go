@@ -3,6 +3,7 @@ package agents
 import (
 	"github.com/MrLeeang/langchain-go/mcp"
 	"github.com/MrLeeang/langchain-go/memory"
+	"github.com/MrLeeang/langchain-go/skills"
 )
 
 // AgentOption is a function type for configuring an Agent.
@@ -55,5 +56,21 @@ func WithConversationID(conversationID string) AgentOption {
 func WithMaxBufferSize(maxBufferSize int) AgentOption {
 	return func(a *Agent) {
 		a.maxBufferSize = maxBufferSize
+	}
+}
+
+// WithSkills sets the skills that the agent can use for task orchestration.
+// Skills are loaded from markdown documents and automatically injected into the system prompt.
+//
+// Example:
+//
+//	skills, _ := skills.Load("./skills")
+//	agent := agents.CreateReactAgent(ctx, llm,
+//	    agents.WithTools(tools),
+//	    agents.WithSkills(skills),
+//	)
+func WithSkills(skillsList []skills.Skill) AgentOption {
+	return func(a *Agent) {
+		a.skillsList = skillsList
 	}
 }

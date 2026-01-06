@@ -7,6 +7,7 @@ import (
 	"github.com/MrLeeang/langchain-go/llms"
 	"github.com/MrLeeang/langchain-go/mcp"
 	"github.com/MrLeeang/langchain-go/memory"
+	"github.com/MrLeeang/langchain-go/skills"
 
 	openai "github.com/sashabaranov/go-openai"
 )
@@ -17,6 +18,7 @@ type Agent struct {
 	ctx              context.Context
 	llm              llms.LLM
 	tools            []mcp.Tool
+	skillsList       []skills.Skill
 	messages         []openai.ChatCompletionMessage
 	maxIter          int
 	mem              memory.Memory
@@ -62,8 +64,8 @@ func CreateReactAgent(ctx context.Context, llm llms.LLM, opts ...AgentOption) *A
 		opt(agent)
 	}
 
-	if len(agent.tools) > 0 {
-		systemPrompt := buildSystemPrompt(agent.tools)
+	if len(agent.tools) > 0 || len(agent.skillsList) > 0 {
+		systemPrompt := buildSystemPrompt(agent.tools, agent.skillsList)
 		agent.messages = append(agent.messages, openai.ChatCompletionMessage{
 			Role:    openai.ChatMessageRoleSystem,
 			Content: systemPrompt,

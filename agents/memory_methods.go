@@ -27,8 +27,8 @@ func (a *Agent) ReloadMessages(latestUserInput string) {
 
 			a.messages = []openai.ChatCompletionMessage{}
 
-			if len(a.tools) > 0 {
-				systemPrompt := buildSystemPrompt(a.tools)
+			if len(a.tools) > 0 || len(a.skillsList) > 0 {
+				systemPrompt := buildSystemPrompt(a.tools, a.skillsList)
 				a.messages = append(a.messages, openai.ChatCompletionMessage{
 					Role:    openai.ChatMessageRoleSystem,
 					Content: systemPrompt,

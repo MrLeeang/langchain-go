@@ -17,31 +17,55 @@ func (a *Agent) parseLLMResponse(ctx context.Context, response string) (string, 
 	var resp struct {
 		Action string                 `json:"action"`
 		Tool   string                 `json:"tool,omitempty"`
+		Skill  string                 `json:"skill,omitempty"`
 		Args   map[string]interface{} `json:"args,omitempty"`
-		Answer string                 `json:"answer,omitempty"`
 	}
 
-	// find call_tool action in response
-	callToolJson := ""
-	idx := strings.Index(response, `{"action":"call_tool"`)
+	// find action json in response
+	actionJSON := ""
+	idx := strings.Index(response, `{"action":"`)
 	if idx != -1 {
-		callToolJson = response[idx:]
+		actionJSON = response[idx:]
 	}
 
-	if callToolJson == "" {
+	if actionJSON == "" {
 		return response, false, nil
 	}
 
-	callToolJson = thoroughlyCleanJSON(callToolJson)
+	actionJSON = thoroughlyCleanJSON(actionJSON)
 
-	if err := json.Unmarshal([]byte(callToolJson), &resp); err != nil {
+	if err := json.Unmarshal([]byte(actionJSON), &resp); err != nil {
 		// If JSON parsing fails, treat the response as a final answer
 		return response, false, nil
 	}
 
 	switch resp.Action {
-	case "final_answer":
-		return resp.Answer, false, nil
+	case "use_skill":
+		if resp.Skill == "" {
+			return "", false, fmt.Errorf("skill name is required for use_skill action")
+		}
+
+		// Execute the selected skill to get detailed instructions
+		instructions, err := a.ExecuteSkill(ctx, resp.Skill, resp.Args)
+		if err != nil {
+			return "", false, fmt.Errorf("failed to execute skill %s: %w", resp.Skill, err)
+		}
+
+		// Inject skill instructions as a new system message so the LLM can
+		// continue following the detailed steps in the next iteration.
+		skillMsg := openai.ChatCompletionMessage{
+			Role:    openai.ChatMessageRoleSystem,
+			Content: instructions,
+		}
+		a.messages = append(a.messages, skillMsg)
+
+		// Optionally save skill instructions to memory
+		if a.mem != nil && a.conversationID != "" {
+			_ = a.mem.SaveMessages(a.ctx, a.conversationID, []openai.ChatCompletionMessage{skillMsg})
+		}
+
+		// Continue the iteration loop
+		return "", true, nil
 
 	case "call_tool":
 		if resp.Tool == "" {
