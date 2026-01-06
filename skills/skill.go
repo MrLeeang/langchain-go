@@ -174,7 +174,7 @@ func parseSkill(filePath, content string) Skill {
 			}
 		} else if len(descriptionLines) > 0 {
 			// Hit empty line after description, stop
-			break
+			continue
 		}
 	}
 
