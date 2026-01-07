@@ -342,9 +342,9 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 		}
 
 		// Optionally, send the skill instructions to the stream for transparency
-		ch <- StreamResponse{Content: "\n"}
-		ch <- StreamResponse{Content: instructions}
-		ch <- StreamResponse{Content: "\n"}
+		// ch <- StreamResponse{Content: "\n"}
+		// ch <- StreamResponse{Content: instructions}
+		// ch <- StreamResponse{Content: "\n"}
 
 		return "", true, nil
 
