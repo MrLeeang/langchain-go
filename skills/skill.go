@@ -160,13 +160,14 @@ func parseSkill(filePath, content string) Skill {
 		Content: content,
 	}
 
-	// Extract description from first paragraph or first header
+	// Extract description from first paragraph (before any ## sections)
 	var descriptionLines []string
 	var inCodeBlock bool
 
-	for i, line := range lines {
+	for _, line := range lines {
 		// Track code blocks
-		if strings.HasPrefix(strings.TrimSpace(line), "```") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "```") {
 			inCodeBlock = !inCodeBlock
 			continue
 		}
@@ -175,27 +176,28 @@ func parseSkill(filePath, content string) Skill {
 			continue
 		}
 
-		// Skip empty lines at the start
-		if len(descriptionLines) == 0 && strings.TrimSpace(line) == "" {
+		// Skip the first-level header (title)
+		if strings.HasPrefix(trimmed, "# ") && !strings.HasPrefix(trimmed, "##") {
 			continue
 		}
 
-		// Stop at first header (after we have some content) or second paragraph
-		if strings.HasPrefix(line, "#") && len(descriptionLines) > 0 {
+		// Stop at any second-level header (##) - this includes ## 步骤, ## 描述, ## 使用建议, etc.
+		if strings.HasPrefix(trimmed, "##") {
 			break
 		}
 
-		// Collect description lines
-		trimmed := strings.TrimSpace(line)
+		// Skip empty lines at the start
+		if len(descriptionLines) == 0 && trimmed == "" {
+			continue
+		}
+
+		// Collect description lines (non-empty lines)
 		if trimmed != "" {
 			descriptionLines = append(descriptionLines, trimmed)
-			// Stop after first paragraph if we hit an empty line
-			if i > 0 && strings.TrimSpace(lines[i-1]) != "" && trimmed != "" {
-				// Continue collecting until we hit an empty line or header
-			}
 		} else if len(descriptionLines) > 0 {
-			// Hit empty line after description, stop
-			continue
+			// Hit empty line after description - stop collecting description
+			// (description is typically a single paragraph)
+			break
 		}
 	}
 

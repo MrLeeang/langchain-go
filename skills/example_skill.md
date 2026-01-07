@@ -1,9 +1,6 @@
 # Data Analysis Skill
 
 This skill helps analyze data by following a structured process.
-
-## Description
-
 The data analysis skill provides a step-by-step approach to analyzing datasets. It guides the agent through data collection, cleaning, analysis, and reporting.
 
 ## Steps
