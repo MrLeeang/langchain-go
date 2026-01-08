@@ -87,3 +87,11 @@ func CreateReactAgent(ctx context.Context, llm llms.LLM, opts ...AgentOption) *A
 
 	return agent
 }
+
+func (a *Agent) SetMessages(messages []openai.ChatCompletionMessage) {
+	a.messages = append(a.messages, messages...)
+}
+
+func (a *Agent) GetMessages() []openai.ChatCompletionMessage {
+	return a.messages
+}
