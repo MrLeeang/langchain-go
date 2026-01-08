@@ -291,7 +291,7 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 
 	// find action json in response
 	callToolJson := ""
-	idx := strings.Index(response, `{"action":"`)
+	idx := strings.Index(response, `{"action":`)
 	if idx != -1 {
 		callToolJson = response[idx:]
 	}
