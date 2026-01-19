@@ -220,17 +220,6 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 
 			// Process the complete response (handleStreamResponse will save the message)
 			if fullContent != "" {
-				// if a.debug {
-				// 	fmt.Println("\n=============fullContent before handleStreamResponse============")
-				// 	fmt.Printf("fullContent length: %d\n", len(fullContent))
-				// 	fmt.Printf("fullContent preview (first 200 chars): %s\n", func() string {
-				// 		if len(fullContent) > 200 {
-				// 			return fullContent[:200] + "..."
-				// 		}
-				// 		return fullContent
-				// 	}())
-				// 	fmt.Println("=============fullContent before handleStreamResponse============")
-				// }
 
 				a.CalculateCompletionTokenUsage(fullContent)
 
