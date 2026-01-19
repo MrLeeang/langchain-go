@@ -74,3 +74,11 @@ func WithSkills(skillsList []skills.Skill) AgentOption {
 		a.skillsList = skillsList
 	}
 }
+
+// WithDebug sets the debug mode for the agent.
+// Default is false.
+func WithDebug(debug bool) AgentOption {
+	return func(a *Agent) {
+		a.debug = debug
+	}
+}

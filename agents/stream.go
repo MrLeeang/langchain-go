@@ -283,11 +283,11 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 		}
 	}
 
-	// if a.debug {
-	// 	fmt.Println("\n=============handleStreamResponse============")
-	// 	fmt.Println("handleStreamResponse: ", response)
-	// 	fmt.Println("=============handleStreamResponse============")
-	// }
+	if a.debug {
+		fmt.Println("\n=============handleStreamResponse============")
+		fmt.Println("handleStreamResponse: ", response)
+		fmt.Println("=============handleStreamResponse============")
+	}
 
 	// find action json in response
 	callToolJson := ""
@@ -297,9 +297,9 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 	}
 
 	if callToolJson == "" {
-		// if a.debug {
-		// 	fmt.Println("\ncallToolJson is empty: ", response)
-		// }
+		if a.debug {
+			fmt.Println("\ncallToolJson is empty: ", response)
+		}
 		return response, false, nil
 	}
 
@@ -308,11 +308,11 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 	if callToolJson != "" {
 		err := json.Unmarshal([]byte(callToolJson), &resp)
 		if err != nil {
-			// if a.debug {
-			// 	fmt.Println("=============unmarshalling============")
-			// 	fmt.Println("error unmarshalling callToolJson: ", err, ", callToolJson: ", callToolJson)
-			// 	fmt.Println("=============unmarshalling============")
-			// }
+			if a.debug {
+				fmt.Println("=============unmarshalling============")
+				fmt.Println("error unmarshalling callToolJson: ", err, ", callToolJson: ", callToolJson)
+				fmt.Println("=============unmarshalling============")
+			}
 			return response, false, nil
 		}
 	}
