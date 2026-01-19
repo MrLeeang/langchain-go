@@ -18,14 +18,16 @@ func buildSystemPrompt(tools []mcp.Tool, skillsList []skills.Skill) string {
 You are an AI assistant. When you need external tools or skills to complete user requests, 
 you must output according to the following requirements:
 
-1) To select and apply a skill, return ONLY the following JSON object (no extra text):
+1) To select and apply a skill, return ONLY the following JSON object (without markdown code blocks):
    {"action":"use_skill","skill":"<skill_name>","args":{...}}
+   - Do NOT wrap the JSON in markdown code blocks (no backticks or code fences).
    - Do NOT include the detailed steps of the skill yourself.
    - After you return this JSON, you will receive the detailed steps for the selected skill
      in a new message, and then you should follow those steps to continue the task.
 
-2) To call a tool directly, return ONLY the following JSON object:
+2) To call a tool directly, return ONLY the following JSON object (without markdown code blocks):
    {"action":"call_tool","tool":"<tool_name>","args":{...}}
+   - Do NOT wrap the JSON in markdown code blocks (no backticks or code fences).
 `
 
 	// Add high-level skills information to the prompt (name + description + usage tips only)

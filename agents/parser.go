@@ -23,7 +23,7 @@ func (a *Agent) parseLLMResponse(ctx context.Context, response string) (string, 
 
 	// find action json in response
 	actionJSON := ""
-	idx := strings.Index(response, `{"action":"`)
+	idx := strings.Index(response, `{"action":`)
 	if idx != -1 {
 		actionJSON = response[idx:]
 	}
