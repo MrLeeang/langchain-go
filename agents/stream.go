@@ -52,7 +52,17 @@ func (a *Agent) Stream(message string) <-chan StreamResponse {
 
 	a.ReloadMessages(message)
 
-	return a.StreamWithContext(a.ctx, message)
+	// Cancel any previous run/stream if still active
+	if a.cancel != nil {
+		a.cancel()
+		a.cancel = nil
+	}
+
+	// Create a cancellable context so that Stop() can interrupt this stream.
+	ctx, cancel := context.WithCancel(a.ctx)
+	a.cancel = cancel
+
+	return a.StreamWithContext(ctx, message)
 }
 
 // StreamWithContext processes a user message with a custom context and returns a channel that streams the response.
@@ -91,6 +101,13 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 		iterations := 0
 		for iterations < a.maxIter {
 			iterations++
+
+			// If the context has been cancelled (via Stop or parent ctx),
+			// abort early.
+			if err := ctx.Err(); err != nil {
+				ch <- StreamResponse{Error: err, Done: true}
+				return
+			}
 
 			// Check if LLM supports streaming
 			streamer, ok := a.llm.(llms.ChatStreamer)

@@ -16,7 +16,23 @@ func (a *Agent) Run(message string) (string, error) {
 
 	a.ReloadMessages(message)
 
-	return a.RunWithContext(a.ctx, message)
+	// Cancel any previous run/stream if still active
+	if a.cancel != nil {
+		a.cancel()
+		a.cancel = nil
+	}
+
+	// Create a cancellable context so that Stop() can interrupt this run.
+	ctx, cancel := context.WithCancel(a.ctx)
+	a.cancel = cancel
+	defer func() {
+		if a.cancel != nil {
+			a.cancel()
+			a.cancel = nil
+		}
+	}()
+
+	return a.RunWithContext(ctx, message)
 }
 
 // RunWithContext processes a user message with a custom context and returns the agent's response.
@@ -51,6 +67,12 @@ func (a *Agent) RunWithContext(ctx context.Context, message string) (string, err
 	iterations := 0
 	for iterations < a.maxIter {
 		iterations++
+
+		// If the context has been cancelled (via Stop or parent ctx),
+		// abort early.
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
 
 		resp, err := a.llm.Chat(ctx, a.messages)
 		if err != nil {

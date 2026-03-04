@@ -16,6 +16,7 @@ import (
 // It maintains a conversation history and can iteratively use tools to gather information.
 type Agent struct {
 	ctx              context.Context
+	cancel           context.CancelFunc
 	llm              llms.LLM
 	tools            []mcp.Tool
 	skillsList       []skills.Skill
