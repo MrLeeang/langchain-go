@@ -161,6 +161,11 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 					break
 				}
 
+				if err == context.Canceled {
+					ch <- StreamResponse{Done: true}
+					return
+				}
+
 				if err != nil {
 					stream.Close()
 					ch <- StreamResponse{Error: fmt.Errorf("stream error: %w", err)}
