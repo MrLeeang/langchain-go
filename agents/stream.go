@@ -105,6 +105,12 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 			// If the context has been cancelled (via Stop or parent ctx),
 			// abort early.
 			if err := ctx.Err(); err != nil {
+
+				if err == context.Canceled {
+					ch <- StreamResponse{Done: true}
+					return
+				}
+
 				ch <- StreamResponse{Error: err, Done: true}
 				return
 			}
