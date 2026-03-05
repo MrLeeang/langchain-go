@@ -163,7 +163,7 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 
 				if err == context.Canceled {
 					stream.Close()
-					ch <- StreamResponse{Done: true, Error: err}
+					ch <- StreamResponse{Done: true}
 					a.CalculateCompletionTokenUsage(fullContent)
 					return
 				}
