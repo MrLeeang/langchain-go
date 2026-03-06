@@ -56,55 +56,7 @@ func (o *Orchestrator) ExecuteSkill(ctx context.Context, skillName string, param
 		return "", fmt.Errorf("skill not found: %s", skillName)
 	}
 
-	var instructions strings.Builder
-	instructions.WriteString(fmt.Sprintf("Executing skill: %s\n", skill.Name))
-	
-	if skill.Description != "" {
-		instructions.WriteString(fmt.Sprintf("Description: %s\n", skill.Description))
-	}
-
-	if len(skill.Steps) > 0 {
-		instructions.WriteString("Steps to follow:\n")
-		for i, step := range skill.Steps {
-			// Replace placeholders with actual parameters
-			formattedStep := formatStep(step, params)
-			instructions.WriteString(fmt.Sprintf("  %d. %s\n", i+1, formattedStep))
-		}
-	} else {
-		// If no steps extracted, use the full content
-		formattedContent := formatStep(skill.Content, params)
-		instructions.WriteString(fmt.Sprintf("Instructions:\n%s\n", formattedContent))
-	}
-
-	// Add usage tips if available
-	if len(skill.UsageTips) > 0 {
-		instructions.WriteString("\nUsage Tips:\n")
-		for _, tip := range skill.UsageTips {
-			formattedTip := formatStep(tip, params)
-			instructions.WriteString(fmt.Sprintf("  - %s\n", formattedTip))
-		}
-	}
-
-	return instructions.String(), nil
-}
-
-// formatStep replaces placeholders in a step with actual parameter values.
-// Placeholders should be in the format {{param_name}}.
-func formatStep(step string, params map[string]interface{}) string {
-	if params == nil {
-		return step
-	}
-
-	formatted := step
-	for key, value := range params {
-		placeholder := fmt.Sprintf("{{%s}}", key)
-		formatted = strings.ReplaceAll(formatted, placeholder, fmt.Sprintf("%v", value))
-		// Also support ${param_name} format
-		placeholder2 := fmt.Sprintf("${%s}", key)
-		formatted = strings.ReplaceAll(formatted, placeholder2, fmt.Sprintf("%v", value))
-	}
-
-	return formatted
+	return skill.Content, nil
 }
 
 // SuggestSkills analyzes the user query and suggests relevant skills.
@@ -132,31 +84,5 @@ func (o *Orchestrator) GetSkillInstructions(skillName string) (string, error) {
 		return "", fmt.Errorf("skill not found: %s", skillName)
 	}
 
-	var instructions strings.Builder
-	instructions.WriteString(fmt.Sprintf("## Skill: %s\n\n", skill.Name))
-	
-	if skill.Description != "" {
-		instructions.WriteString(fmt.Sprintf("%s\n\n", skill.Description))
-	}
-
-	if len(skill.Steps) > 0 {
-		instructions.WriteString("### Steps:\n\n")
-		for i, step := range skill.Steps {
-			instructions.WriteString(fmt.Sprintf("%d. %s\n", i+1, step))
-		}
-	} else {
-		instructions.WriteString("### Instructions:\n\n")
-		instructions.WriteString(skill.Content)
-	}
-
-	// Add usage tips if available
-	if len(skill.UsageTips) > 0 {
-		instructions.WriteString("\n### Usage Tips:\n\n")
-		for _, tip := range skill.UsageTips {
-			instructions.WriteString(fmt.Sprintf("- %s\n", tip))
-		}
-	}
-
-	return instructions.String(), nil
+	return skill.Content, nil
 }
-

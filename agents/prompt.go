@@ -45,12 +45,6 @@ you must output according to the following requirements:
 				prompt += fmt.Sprintf(": %s", skill.Description)
 			}
 			prompt += "\n"
-			// Add usage tips if available
-			if len(skill.UsageTips) > 0 {
-				for _, tip := range skill.UsageTips {
-					prompt += fmt.Sprintf("  Usage: %s\n", tip)
-				}
-			}
 		}
 
 		prompt += `
