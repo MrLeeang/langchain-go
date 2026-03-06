@@ -355,10 +355,11 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 		}
 		a.messages = append(a.messages, skillMsg)
 
+		// skills context does not need to be saved to memory
 		// Save skill instructions to memory
-		if a.mem != nil && a.conversationID != "" {
-			_ = a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{skillMsg})
-		}
+		// if a.mem != nil && a.conversationID != "" {
+		// 	_ = a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{skillMsg})
+		// }
 
 		// Optionally, send the skill instructions to the stream for transparency
 		// ch <- StreamResponse{Content: "\n"}
