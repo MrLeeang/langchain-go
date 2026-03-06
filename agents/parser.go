@@ -59,10 +59,11 @@ func (a *Agent) parseLLMResponse(ctx context.Context, response string) (string, 
 		}
 		a.messages = append(a.messages, skillMsg)
 
+		// skills context does not need to be saved to memory
 		// Optionally save skill instructions to memory
-		if a.mem != nil && a.conversationID != "" {
-			_ = a.mem.SaveMessages(a.ctx, a.conversationID, []openai.ChatCompletionMessage{skillMsg})
-		}
+		// if a.mem != nil && a.conversationID != "" {
+		// 	_ = a.mem.SaveMessages(a.ctx, a.conversationID, []openai.ChatCompletionMessage{skillMsg})
+		// }
 
 		// Continue the iteration loop
 		return "", true, nil
