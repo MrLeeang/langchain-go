@@ -171,12 +171,7 @@ func parseSkill(filePath, content string) Skill {
 		}
 
 		// Skip the first-level header (title)
-		if strings.HasPrefix(trimmed, "# ") && !strings.HasPrefix(trimmed, "##") {
-			continue
-		}
-
-		// Stop at any second-level header (##) - this includes ## 步骤, ## 描述, ## 使用建议, etc.
-		if strings.HasPrefix(trimmed, "##") {
+		if strings.HasPrefix(trimmed, "#") {
 			break
 		}
 
