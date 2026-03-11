@@ -24,6 +24,7 @@ you must output according to the following requirements:
    - Do NOT include the detailed steps of the skill yourself.
    - After you return this JSON, you will receive the detailed steps for the selected skill
      in a new message, and then you should follow those steps to continue the task.
+   - json must be output in one line, no line breaks
 
    example:
 	 {"action":"use_skill","skill":"search-host","args":{"query":"google"}}
@@ -31,7 +32,8 @@ you must output according to the following requirements:
 2) To call a tool directly, return ONLY the following JSON object (without markdown code blocks):
    {"action":"call_tool","tool":"<tool_name>","args":{...}}
    - Do NOT wrap the JSON in markdown code blocks (no backticks or code fences).
-
+   - json must be output in one line, no line breaks
+   
    example:
 	 {"action":"call_tool","tool":"create_session","args":{"session_id: "1234567890"}}
 `
