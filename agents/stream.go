@@ -409,8 +409,9 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 
 		// Add tool result to conversation and continue
 		toolMessage := fmt.Sprintf("Tool %s returned: %s", resp.Tool, toolResult)
+		// ChatMessageRoleTool
 		msg := openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleTool,
+			Role:    openai.ChatMessageRoleUser,
 			Content: toolMessage,
 		}
 		a.messages = append(a.messages, msg)
