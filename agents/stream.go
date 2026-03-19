@@ -86,7 +86,7 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 
 		// Calculate prompt token usage for all messages
 		for _, msg := range a.messages {
-			if msg.Role == openai.ChatMessageRoleUser || msg.Role == openai.ChatMessageRoleSystem {
+			if msg.Role == openai.ChatMessageRoleUser || msg.Role == openai.ChatMessageRoleSystem || msg.Role == openai.ChatMessageRoleTool {
 				a.CalculatePromptTokenUsage(msg.Content)
 			}
 		}
@@ -350,7 +350,7 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 
 		// Inject skill instructions as a new system message
 		skillMsg := openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleSystem,
+			Role:    openai.ChatMessageRoleUser,
 			Content: instructions,
 		}
 		a.messages = append(a.messages, skillMsg)
@@ -410,7 +410,7 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 		// Add tool result to conversation and continue
 		toolMessage := fmt.Sprintf("Tool %s returned: %s", resp.Tool, toolResult)
 		msg := openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleUser,
+			Role:    openai.ChatMessageRoleTool,
 			Content: toolMessage,
 		}
 		a.messages = append(a.messages, msg)

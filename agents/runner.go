@@ -51,7 +51,7 @@ func (a *Agent) RunWithContext(ctx context.Context, message string) (string, err
 
 	// Calculate prompt token usage for all messages
 	for _, msg := range a.messages {
-		if msg.Role == openai.ChatMessageRoleUser || msg.Role == openai.ChatMessageRoleSystem {
+		if msg.Role == openai.ChatMessageRoleUser || msg.Role == openai.ChatMessageRoleSystem || msg.Role == openai.ChatMessageRoleTool {
 			a.CalculatePromptTokenUsage(msg.Content)
 		}
 	}

@@ -54,7 +54,7 @@ func (a *Agent) parseLLMResponse(ctx context.Context, response string) (string, 
 		// Inject skill instructions as a new system message so the LLM can
 		// continue following the detailed steps in the next iteration.
 		skillMsg := openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleSystem,
+			Role:    openai.ChatMessageRoleUser,
 			Content: instructions,
 		}
 		a.messages = append(a.messages, skillMsg)
@@ -86,7 +86,7 @@ func (a *Agent) parseLLMResponse(ctx context.Context, response string) (string, 
 		// Add tool result to conversation and continue
 		toolMessage := fmt.Sprintf("Tool %s returned: %s", resp.Tool, toolResult)
 		msg := openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleUser,
+			Role:    openai.ChatMessageRoleTool,
 			Content: toolMessage,
 		}
 		a.messages = append(a.messages, msg)
