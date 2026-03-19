@@ -33,6 +33,10 @@ func (a *Agent) ReloadMessages(latestUserInput string) {
 					Role:    openai.ChatMessageRoleSystem,
 					Content: systemPrompt,
 				})
+
+				if a.Prompt != "" {
+					a.messages[0].Content += "\n\n# User Instructions\n" + a.Prompt
+				}
 			}
 
 			milvusMem.SetQuery(latestUserInput)

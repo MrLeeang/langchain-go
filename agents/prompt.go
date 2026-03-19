@@ -5,8 +5,6 @@ import (
 
 	"github.com/MrLeeang/langchain-go/mcp"
 	"github.com/MrLeeang/langchain-go/skills"
-
-	openai "github.com/sashabaranov/go-openai"
 )
 
 // buildSystemPrompt constructs the system prompt for the agent.
@@ -14,9 +12,12 @@ import (
 // the full detailed steps from skills documents. The detailed steps
 // are only injected after the LLM explicitly selects a skill.
 func buildSystemPrompt(tools []mcp.Tool, skillsList []skills.Skill) string {
-	prompt := `
-You are an AI assistant. When you need external tools or skills to complete user requests, 
+	prompt := `You are an AI assistant. When you need external tools or skills to complete user requests, 
 you must output according to the following requirements:
+
+Core concept (do NOT mix them):
+- Skill ("use_skill") = select a reusable workflow. After selecting a skill, you will receive the skill's detailed instructions in the next message. Skills are NOT executed directly.
+- Tool ("call_tool") = execute an external function immediately. After calling a tool, you will receive the tool result and then you can continue.
 
 1) To select and apply a skill, return ONLY the following JSON object (without markdown code blocks):
    {"action":"use_skill","skill":"<skill_name>","args":{...}}
@@ -26,21 +27,37 @@ you must output according to the following requirements:
      in a new message, and then you should follow those steps to continue the task.
    - json must be output in one line, no line breaks
 
-   example:
-	 {"action":"use_skill","skill":"search-host","args":{"query":"google"}}
+   examples (Skill selection):
+	   # search host
+       User: search for google
+       Assistant: {"action":"use_skill","skill":"search-host"}
 
 2) To call a tool directly, return ONLY the following JSON object (without markdown code blocks):
    {"action":"call_tool","tool":"<tool_name>","args":{...}}
    - Do NOT wrap the JSON in markdown code blocks (no backticks or code fences).
    - json must be output in one line, no line breaks
    
-   example:
-	 {"action":"call_tool","tool":"create_session","args":{"session_id: "1234567890"}}
+   examples (Tool execution):
+       # create session
+	   User: create a new session with python code
+	   Assistant: {"action":"call_tool","tool":"create_session","args":{"session_id":"1234567890"}}
+	
+	   # nmap scan
+	   User: scan the target host with nmap
+	   Assistant: {"action":"call_tool","tool":"nmap","args":{"target":"192.168.1.1"}}
+
+	   # ping scan
+	   User: ping scan the target host
+	   Assistant: {"action":"call_tool","tool":"ping","args":{"target":"192.168.1.1"}}
+
+	   # whois scan
+	   User: whois scan the target host
+	   Assistant: {"action":"call_tool","tool":"whois","args":{"target":"192.168.1.1"}}
 `
 
 	// Add high-level skills information to the prompt (name + description + usage tips only)
 	if len(skillsList) > 0 {
-		prompt += "\n\nAvailable skills for task orchestration (high-level overview only):\n"
+		prompt += "\n\nAvailable skills for workflow orchestration (high-level overview only; selecting is done via \"use_skill\"):\n"
 		for _, skill := range skillsList {
 			prompt += fmt.Sprintf("- %s", skill.Name)
 			if skill.Description != "" {
@@ -51,14 +68,14 @@ you must output according to the following requirements:
 
 		prompt += `
 
-When appropriate, choose the most suitable skill using the "use_skill" action.
-You do NOT need to remember the detailed steps; they will be provided to you after selection.
+When you need a predefined workflow, choose the most suitable skill using the "use_skill" action.
+Do not execute tools when selecting a skill; you will receive workflow instructions first, then call tools in later turns if needed.
 `
 	}
 
 	// Add tools information to the prompt
 	if len(tools) > 0 {
-		prompt += "\n\nAvailable tools:\n"
+		prompt += "\n\nAvailable tools (execute immediately via \"call_tool\"):\n"
 		for _, tool := range tools {
 			prompt += tool.Description() + "\n"
 		}
@@ -70,9 +87,12 @@ You do NOT need to remember the detailed steps; they will be provided to you aft
 // WithPrompt adds a custom system prompt to the agent.
 // This can be used to customize the agent's behavior or add additional instructions.
 func (a *Agent) WithPrompt(prompt string) *Agent {
-	a.messages = append(a.messages, openai.ChatCompletionMessage{
-		Role:    openai.ChatMessageRoleSystem,
-		Content: prompt,
-	})
+	// a.messages = append(a.messages, openai.ChatCompletionMessage{
+	// 	Role:    openai.ChatMessageRoleSystem,
+	// 	Content: prompt,
+	// })
+
+	a.messages[0].Content += "\n\n# User Instructions\n" + prompt
+	a.Prompt = prompt
 	return a
 }

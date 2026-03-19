@@ -21,6 +21,7 @@ type Agent struct {
 	tools            []mcp.Tool
 	skillsList       []skills.Skill
 	messages         []openai.ChatCompletionMessage
+	Prompt           string
 	maxIter          int
 	mem              memory.Memory
 	conversationID   string
