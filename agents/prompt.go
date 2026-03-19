@@ -42,17 +42,14 @@ Core concept (do NOT mix them):
 	   User: create a new session with python code
 	   Assistant: {"action":"call_tool","tool":"create_session","args":{"session_id":"1234567890"}}
 	
+
+	   # close session
+	   User: close the session
+	   Assistant: {"action":"call_tool","tool":"close_session","args":{"session_id":"1234567890"}}
+
 	   # nmap scan
 	   User: scan the target host with nmap
-	   Assistant: {"action":"call_tool","tool":"nmap","args":{"target":"192.168.1.1"}}
-
-	   # ping scan
-	   User: ping scan the target host
-	   Assistant: {"action":"call_tool","tool":"ping","args":{"target":"192.168.1.1"}}
-
-	   # whois scan
-	   User: whois scan the target host
-	   Assistant: {"action":"call_tool","tool":"whois","args":{"target":"192.168.1.1"}}
+	   Assistant: {"action":"call_tool","tool":"nmap_scan","args":{"target":"192.168.1.1"}}
 `
 
 	// Add high-level skills information to the prompt (name + description + usage tips only)
