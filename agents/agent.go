@@ -97,3 +97,11 @@ func (a *Agent) SetMessages(messages []openai.ChatCompletionMessage) {
 func (a *Agent) GetMessages() []openai.ChatCompletionMessage {
 	return a.messages
 }
+
+// GetLLM returns the underlying LLM instance
+func (a *Agent) GetLLM() llms.LLM {
+	if a == nil {
+		return nil
+	}
+	return a.llm
+}

@@ -71,11 +71,43 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 
 	go func() {
 		a.StartTime = time.Now()
+
 		defer func() {
 			a.EndTime = time.Now()
 			a.Duration = a.EndTime.Sub(a.StartTime)
 			time.Sleep(1 * time.Second)
 			close(ch)
+
+			// 生成Assistant概要消息，然后作为Assistant消息保存起来
+			// 创建概要生成器（使用已有的大模型）
+			summarizer := NewSummarizer(SummarizerConfig{
+				LLM:       a.GetLLM(),
+				MaxTokens: 500,
+			})
+
+			// 生成概要
+			summary, err := summarizer.GenerateSummaryWithContext(ctx, a.messages)
+
+			if err != nil {
+				// 如果生成概要失败，记录错误但不影响正常流程
+				fmt.Println("Error generating summary:", err)
+				return
+			}
+
+			// 将生成的概要作为Assistant消息保存到对话中
+			summaryMsg := openai.ChatCompletionMessage{
+				Role:    openai.ChatMessageRoleAssistant,
+				Content: fmt.Sprintf("Conversation Summary:\n%s", summary),
+			}
+			a.messages = append(a.messages, summaryMsg)
+
+			// 可选：将概要消息保存到内存中，以便后续查询使用
+			if a.mem != nil && a.conversationID != "" {
+				if err := a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{summaryMsg}); err != nil {
+					fmt.Println("Error saving summary to memory:", err)
+				}
+			}
+
 		}()
 
 		userMsg := openai.ChatCompletionMessage{
@@ -297,9 +329,9 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 		}
 		a.messages = append(a.messages, assistantMsg)
 
-		if a.mem != nil && a.conversationID != "" {
-			_ = a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{assistantMsg})
-		}
+		// if a.mem != nil && a.conversationID != "" {
+		// 	_ = a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{assistantMsg})
+		// }
 	}
 
 	if a.debug {
@@ -409,17 +441,35 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 
 		// Add tool result to conversation and continue
 		toolMessage := fmt.Sprintf("Tool %s returned: %s", resp.Tool, toolResult)
+
+		// 生成概要
+		summarizer := NewSummarizer(SummarizerConfig{
+			LLM:       a.GetLLM(),
+			MaxTokens: 500,
+		})
+
+		summary, err := summarizer.GenerateSummaryWithContext(ctx, []openai.ChatCompletionMessage{
+			{
+				Role:    openai.ChatMessageRoleUser,
+				Content: toolMessage,
+			},
+		})
+
+		if err != nil {
+			summary = toolMessage
+		}
+
 		// ChatMessageRoleTool
 		msg := openai.ChatCompletionMessage{
 			Role:    openai.ChatMessageRoleUser,
-			Content: toolMessage,
+			Content: summary,
 		}
 		a.messages = append(a.messages, msg)
 
 		// Save tool message to memory
-		if a.mem != nil && a.conversationID != "" {
-			_ = a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{msg})
-		}
+		// if a.mem != nil && a.conversationID != "" {
+		// 	_ = a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{msg})
+		// }
 
 		return "", true, nil
 
@@ -438,9 +488,9 @@ func (a *Agent) handleLLMResponse(ctx context.Context, output string) (string, b
 	a.messages = append(a.messages, assistantMsg)
 
 	// Save assistant message to memory
-	if a.mem != nil && a.conversationID != "" {
-		_ = a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{assistantMsg})
-	}
+	// if a.mem != nil && a.conversationID != "" {
+	// 	_ = a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{assistantMsg})
+	// }
 
 	return a.parseLLMResponse(ctx, output)
 }

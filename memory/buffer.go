@@ -79,3 +79,11 @@ func (m *BufferMemory) GetConversations() []string {
 	return ids
 }
 
+func (m *BufferMemory) GetRelevantMessages(conversationID string) []openai.ChatCompletionMessage {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	messages := m.conversations[conversationID]
+
+	return messages
+}

@@ -64,6 +64,38 @@ func (a *Agent) RunWithContext(ctx context.Context, message string) (string, err
 		}
 	}
 
+	defer func() {
+		// 生成Assistant概要消息，然后作为Assistant消息保存起来
+		// 创建概要生成器（使用已有的大模型）
+		summarizer := NewSummarizer(SummarizerConfig{
+			LLM:       a.GetLLM(), // 复用现有大模型
+			MaxTokens: 500,
+		})
+
+		// 生成概要
+		summary, err := summarizer.GenerateSummaryWithContext(ctx, a.messages)
+
+		if err != nil {
+			// 如果生成概要失败，记录错误但不影响正常流程
+			fmt.Println("Error generating summary:", err)
+			return
+		}
+
+		// 将生成的概要作为Assistant消息保存到对话中
+		summaryMsg := openai.ChatCompletionMessage{
+			Role:    openai.ChatMessageRoleAssistant,
+			Content: fmt.Sprintf("Conversation Summary:\n%s", summary),
+		}
+		a.messages = append(a.messages, summaryMsg)
+
+		// 可选：将概要消息保存到内存中，以便后续查询使用
+		if a.mem != nil && a.conversationID != "" {
+			if err := a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{summaryMsg}); err != nil {
+				fmt.Println("Error saving summary to memory:", err)
+			}
+		}
+	}()
+
 	iterations := 0
 	for iterations < a.maxIter {
 		iterations++
@@ -93,12 +125,12 @@ func (a *Agent) RunWithContext(ctx context.Context, message string) (string, err
 		a.CalculateCompletionTokenUsage(output)
 
 		// Save assistant message to memory
-		if a.mem != nil && a.conversationID != "" {
-			if err := a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{assistantMsg}); err != nil {
-				// Log error but continue
-				fmt.Println("error", err)
-			}
-		}
+		// if a.mem != nil && a.conversationID != "" {
+		// 	if err := a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{assistantMsg}); err != nil {
+		// 		// Log error but continue
+		// 		fmt.Println("error", err)
+		// 	}
+		// }
 
 		result, shouldContinue, err := a.parseLLMResponse(ctx, output)
 		if err != nil {

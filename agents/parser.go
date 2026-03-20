@@ -93,9 +93,9 @@ func (a *Agent) parseLLMResponse(ctx context.Context, response string) (string, 
 		a.messages = append(a.messages, msg)
 
 		// Save tool message to memory (optional, but helps maintain full conversation history)
-		if a.mem != nil && a.conversationID != "" {
-			_ = a.mem.SaveMessages(a.ctx, a.conversationID, []openai.ChatCompletionMessage{msg})
-		}
+		// if a.mem != nil && a.conversationID != "" {
+		// 	_ = a.mem.SaveMessages(a.ctx, a.conversationID, []openai.ChatCompletionMessage{msg})
+		// }
 
 		return "", true, nil
 
