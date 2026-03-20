@@ -46,4 +46,6 @@ func (a *Agent) ReloadMessages(latestUserInput string) {
 			}
 		}
 	}
+
+	a.historyMessageIndex = len(a.messages)
 }

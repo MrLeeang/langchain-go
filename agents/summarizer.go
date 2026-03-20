@@ -64,6 +64,7 @@ func (s *Summarizer) GenerateSummaryWithContext(ctx context.Context, msgs []open
 		if msg.Role == openai.ChatMessageRoleSystem {
 			continue
 		}
+
 		messages = append(messages, msg)
 	}
 

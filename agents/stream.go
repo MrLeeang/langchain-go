@@ -86,7 +86,7 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 			})
 
 			// 生成概要
-			summary, err := summarizer.GenerateSummaryWithContext(ctx, a.messages)
+			summary, err := summarizer.GenerateSummaryWithContext(ctx, a.messages[a.historyMessageIndex:])
 
 			if err != nil {
 				// 如果生成概要失败，记录错误但不影响正常流程
