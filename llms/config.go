@@ -12,4 +12,7 @@ type Config struct {
 	// Model is the model name to use.
 	// Examples: "gpt-4", "deepseek-chat", "deepseek-reasoner"
 	Model string
+
+	// Thinking is whether to enable thinking.
+	Thinking bool
 }

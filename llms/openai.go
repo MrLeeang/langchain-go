@@ -10,8 +10,9 @@ import (
 // OpenAIModel is an implementation of the LLM interface using OpenAI's API.
 // It can be used with any OpenAI-compatible API endpoint (e.g., DeepSeek, Anthropic via proxy, etc.).
 type OpenAIModel struct {
-	client *openai.Client
-	model  string
+	client   *openai.Client
+	model    string
+	thinking bool
 }
 
 // NewOpenAIModel creates a new OpenAI-compatible chat model instance using a config struct.
@@ -28,8 +29,9 @@ func NewOpenAIModel(cfg Config) *OpenAIModel {
 	config.BaseURL = cfg.BaseURL
 	client := openai.NewClientWithConfig(config)
 	return &OpenAIModel{
-		client: client,
-		model:  cfg.Model,
+		client:   client,
+		model:    cfg.Model,
+		thinking: cfg.Thinking,
 	}
 }
 
@@ -38,6 +40,9 @@ func (m *OpenAIModel) Chat(ctx context.Context, messages []openai.ChatCompletion
 	req := openai.ChatCompletionRequest{
 		Model:    m.model,
 		Messages: messages,
+		ChatTemplateKwargs: map[string]any{
+			"enable_thinking": false,
+		},
 	}
 
 	return m.client.CreateChatCompletion(ctx, req)
@@ -50,6 +55,9 @@ func (m *OpenAIModel) ChatStream(ctx context.Context, messages []openai.ChatComp
 		Model:    m.model,
 		Messages: messages,
 		Stream:   true,
+		ChatTemplateKwargs: map[string]any{
+			"enable_thinking": m.thinking,
+		},
 	}
 
 	return m.client.CreateChatCompletionStream(ctx, req)
