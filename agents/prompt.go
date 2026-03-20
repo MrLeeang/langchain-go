@@ -20,7 +20,8 @@ Core concept (do NOT mix them):
 - Tool ("call_tool") = execute an external function immediately. After calling a tool, you will receive the tool result and then you can continue.
 
 Important Notice!:
-The output format of the skill (use_stkill) and calling tool (call_tool) must strictly adhere to the following JSON structure, and can only output JSON without adding any additional text or markdown format:
+- The output format of the skill (use_stkill) and calling tool (call_tool) must strictly adhere to the following JSON structure, and can only output JSON without adding any additional text or markdown format:
+- Please never output any thought process, <think> tags, or reasoning steps. Provide the final answer directly.
 
 1) To select and apply a skill, return ONLY the following JSON object (without markdown code blocks):
    {"action":"use_skill","skill":"<skill_name>","args":{...}}
