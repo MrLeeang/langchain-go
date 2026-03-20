@@ -59,13 +59,13 @@ The output format of the skill (use_stkill) and calling tool (call_tool) must st
 
 	// Add high-level skills information to the prompt (name + description + usage tips only)
 	if len(skillsList) > 0 {
-		prompt += "\n\nAvailable skills for workflow orchestration (high-level overview only; selecting is done via \"use_skill\"):\n"
+		prompt += "\n\nAvailable skills for workflow orchestration (high-level overview only; selecting is done via \"use_skill\"):\n\n"
 		for _, skill := range skillsList {
-			prompt += fmt.Sprintf("- %s", skill.Name)
+			prompt += fmt.Sprintf("name: %s", skill.Name)
 			if skill.Description != "" {
 				prompt += fmt.Sprintf(": %s", skill.Description)
 			}
-			prompt += "\n"
+			prompt += "\n\n"
 		}
 
 		prompt += `
