@@ -158,7 +158,12 @@ func parseSkill(filePath, content string) Skill {
 	var descriptionLines []string
 	var inCodeBlock bool
 
-	for _, line := range lines {
+	for index, line := range lines {
+
+		if index == 0 {
+			continue
+		}
+
 		// Track code blocks
 		trimmed := strings.TrimSpace(line)
 		if strings.HasPrefix(trimmed, "```") {
@@ -183,10 +188,6 @@ func parseSkill(filePath, content string) Skill {
 		// Collect description lines (non-empty lines)
 		if trimmed != "" {
 			descriptionLines = append(descriptionLines, trimmed)
-		} else if len(descriptionLines) > 0 {
-			// Hit empty line after description - stop collecting description
-			// (description is typically a single paragraph)
-			break
 		}
 	}
 

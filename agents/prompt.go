@@ -96,5 +96,10 @@ func (a *Agent) WithPrompt(prompt string) *Agent {
 
 	a.messages[0].Content += "\n\n# User Instructions\n" + prompt
 	a.Prompt = prompt
+
+	if a.debug {
+		fmt.Printf("System prompt set to:\n%s\n", a.messages[0].Content)
+	}
+
 	return a
 }
