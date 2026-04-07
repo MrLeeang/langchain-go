@@ -12,7 +12,11 @@ import (
 // the full detailed steps from skills documents. The detailed steps
 // are only injected after the LLM explicitly selects a skill.
 func buildSystemPrompt(tools []mcp.Tool, skillsList []skills.Skill) string {
-	prompt := `You are an AI assistant. When you need external tools or skills to complete user requests, 
+	prompt := `You are an AI assistant. When you need external tools or skills to complete user requests.
+
+In this environment you have access to a set of tools you can use to answer the user's question. \\
+You can use one tool per message, and will receive the result of that tool use in the user's response. You use tools step-by-step to accomplish a given task, with each tool use informed by the result of the previous tool use.
+
 you must output according to the following requirements:
 
 Core concept (do NOT mix them):
