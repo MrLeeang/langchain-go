@@ -105,6 +105,7 @@ Instructions:
 5. Focus on the most important information
 6. Maintain objectivity and accuracy
 7. Include relevant details that provide context
+8. If there are commands, code, sql statements, etc., please keep the original text format and do not modify it.
 
 Provide only the summary without any preamble or explanation.`, s.maxTokens)
 }
@@ -121,6 +122,7 @@ func (s *Summarizer) buildChineseSummaryPrompt() string {
 5. 重点关注最重要的信息
 6. 保持客观性和准确性
 7. 包含提供上下文的相关细节
+8. 如果有命令、代码、sql语句等，请保持原文本格式，不要进行任何修改。
 
 仅提供摘要，不需要前言或解释。`, s.maxTokens)
 }
