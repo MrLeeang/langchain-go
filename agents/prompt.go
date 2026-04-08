@@ -73,7 +73,6 @@ The output format of the skill (use_skill) and calling tool (call_tool) must str
 		}
 
 		prompt += `
-
 Skills Use Rules
 1. When you need a predefined workflow, choose the most suitable skill using the "use_skill" action.
 2. Do not execute tools when selecting a skill; you will receive workflow instructions first, then call tools in later turns if needed.
@@ -84,13 +83,15 @@ Skills Use Rules
 
 	// Add tools information to the prompt
 	if len(tools) > 0 {
-		prompt += "\n\nAvailable tools (execute immediately via \"call_tool\"):\n"
+		prompt += "\n\nAvailable tools (execute immediately via \"call_tool\"):\n\n"
 		for _, tool := range tools {
-			prompt += "\n\n" + tool.Description() + "\n"
+			prompt += tool.Description()
+
+			prompt += "\n\n"
+
 		}
 
 		prompt += `
-		
 Tools Use Rules
 Here are the rules you should always follow to solve your task:
 1. Always use the right arguments for the tools. Never use variable names as the action arguments, use the value instead.
