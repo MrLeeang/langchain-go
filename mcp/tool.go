@@ -37,7 +37,7 @@ func (t *MCPTool) Name() string {
 // description, and argument schema.
 func (t *MCPTool) Description() string {
 	argsJSON, _ := json.Marshal(t.argsSchema)
-	return fmt.Sprintf("name: %s\nDescription: %s\nArguments Schema: %s", t.remoteName, t.remoteDesc, string(argsJSON))
+	return fmt.Sprintf("name: %s\nDescription: %s\nArguments: %s", t.remoteName, t.remoteDesc, string(argsJSON))
 }
 
 // Call executes the tool with the given input.

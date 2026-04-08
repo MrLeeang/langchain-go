@@ -14,7 +14,7 @@ func (a *Agent) Run(message string) (string, error) {
 	a.ResetTokenUsage()
 	a.ResetDuration()
 
-	a.ReloadMessages(message)
+	a.LoadMessages(message)
 
 	// Cancel any previous run/stream if still active
 	if a.cancel != nil {
@@ -67,31 +67,38 @@ func (a *Agent) RunWithContext(ctx context.Context, message string) (string, err
 	defer func() {
 		// 生成Assistant概要消息，然后作为Assistant消息保存起来
 		// 创建概要生成器（使用已有的大模型）
-		summarizer := NewSummarizer(SummarizerConfig{
-			LLM:       a.GetLLM(), // 复用现有大模型
-			MaxTokens: 500,
-		})
+		// summarizer := NewSummarizer(SummarizerConfig{
+		// 	LLM:       a.GetLLM(), // 复用现有大模型
+		// 	MaxTokens: 500,
+		// })
 
-		// 生成概要
-		summary, err := summarizer.GenerateSummaryWithContext(ctx, a.messages[a.historyMessageIndex:])
+		// // 生成概要
+		// summary, err := summarizer.GenerateSummaryWithContext(ctx, a.messages[a.historyMessageIndex:])
 
-		if err != nil {
-			// 如果生成概要失败，记录错误但不影响正常流程
-			fmt.Println("Error generating summary:", err)
-			return
-		}
+		// if err != nil {
+		// 	// 如果生成概要失败，记录错误但不影响正常流程
+		// 	fmt.Println("Error generating summary:", err)
+		// 	return
+		// }
 
-		// 将生成的概要作为Assistant消息保存到对话中
-		summaryMsg := openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleAssistant,
-			Content: fmt.Sprintf("Conversation Summary:\n%s", summary),
-		}
-		a.messages = append(a.messages, summaryMsg)
+		// // 将生成的概要作为Assistant消息保存到对话中
+		// summaryMsg := openai.ChatCompletionMessage{
+		// 	Role:    openai.ChatMessageRoleAssistant,
+		// 	Content: fmt.Sprintf("Conversation Summary:\n%s", summary),
+		// }
+		// a.messages = append(a.messages, summaryMsg)
 
-		// 可选：将概要消息保存到内存中，以便后续查询使用
+		// // 可选：将概要消息保存到内存中，以便后续查询使用
+		// if a.mem != nil && a.conversationID != "" {
+		// 	if err := a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{summaryMsg}); err != nil {
+		// 		fmt.Println("Error saving summary to memory:", err)
+		// 	}
+		// }
+
 		if a.mem != nil && a.conversationID != "" {
-			if err := a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{summaryMsg}); err != nil {
-				fmt.Println("Error saving summary to memory:", err)
+			// user message already saved to memory in handleStreamResponse
+			if err := a.mem.SaveMessages(ctx, a.conversationID, a.messages[a.historyMessageIndex+1:]); err != nil {
+				fmt.Println("Error saving messages to memory:", err)
 			}
 		}
 	}()

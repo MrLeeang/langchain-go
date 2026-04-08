@@ -1,6 +1,8 @@
 package agents
 
 import (
+	"fmt"
+
 	"github.com/MrLeeang/langchain-go/memory"
 	openai "github.com/sashabaranov/go-openai"
 )
@@ -18,31 +20,97 @@ func (a *Agent) ClearHistory() error {
 	return nil
 }
 
-func (a *Agent) ReloadMessages(latestUserInput string) {
+func (a *Agent) LoadMessages(latestUserInput string) {
 	// clean tmp messages
 	if a.mem != nil && a.conversationID != "" {
+
+		// build system prompt
+		if len(a.tools) > 0 || len(a.skillsList) > 0 {
+			systemPrompt := buildSystemPrompt(a.tools, a.skillsList)
+			a.messages = append(a.messages, openai.ChatCompletionMessage{
+				Role:    openai.ChatMessageRoleSystem,
+				Content: systemPrompt,
+			})
+
+			if a.Prompt != "" {
+				a.messages[0].Content += "\n\n# User Instructions\n" + a.Prompt
+			}
+		}
+
 		// Check if this is MilvusMemory with query-based loading enabled
 		// If so, skip loading here - it will be loaded when we have the user query
 		if milvusMem, ok := a.mem.(*memory.MilvusMemory); ok {
 
 			a.messages = []openai.ChatCompletionMessage{}
 
-			if len(a.tools) > 0 || len(a.skillsList) > 0 {
-				systemPrompt := buildSystemPrompt(a.tools, a.skillsList)
-				a.messages = append(a.messages, openai.ChatCompletionMessage{
-					Role:    openai.ChatMessageRoleSystem,
-					Content: systemPrompt,
-				})
-
-				if a.Prompt != "" {
-					a.messages[0].Content += "\n\n# User Instructions\n" + a.Prompt
-				}
-			}
-
 			milvusMem.SetQuery(latestUserInput)
 
 			if history, err := a.mem.LoadMessages(a.ctx, a.conversationID); err == nil && len(history) > 0 {
 				a.messages = append(a.messages, history...)
+			}
+		} else {
+			if history, err := a.mem.LoadMessages(a.ctx, a.conversationID); err == nil && len(history) > 0 {
+
+				// 计算history的token数量
+				tokenCounter, err := NewTokenCounter()
+				if err != nil {
+					return
+				}
+
+				tokenCount := 0
+				historyIndex := 0
+
+				for index, msg := range history {
+					tokenCount += tokenCounter.CountTokens(msg.Content)
+					if tokenCount > a.maxHistoryTokens {
+						if index == 0 {
+							// 单条消息就超限，强制截断这条消息
+							historyIndex = 1
+						} else {
+							historyIndex = index - 1
+						}
+						break
+					}
+				}
+
+				if historyIndex == 0 {
+					a.messages = append(a.messages, history...)
+				} else {
+
+					// 触发压缩
+
+					// 保证第一条是user message
+					for historyIndex > 0 && history[historyIndex].Role != openai.ChatMessageRoleUser {
+						historyIndex--
+					}
+
+					// 生成Assistant概要消息，然后作为Assistant消息保存起来
+					// 创建概要生成器（使用已有的大模型）
+					summarizer := NewSummarizer(SummarizerConfig{
+						LLM:       a.GetLLM(), // 复用现有大模型
+						MaxTokens: 1000,
+					})
+
+					// 生成概要
+					summary, err := summarizer.GenerateSummaryWithContext(a.ctx, history[:historyIndex])
+
+					if err != nil {
+						// 如果生成概要失败，记录错误但不影响正常流程
+						fmt.Println("Error generating summary:", err)
+						return
+					}
+
+					// 将生成的概要作为Assistant消息保存到对话中
+					summaryMsg := openai.ChatCompletionMessage{
+						Role:    openai.ChatMessageRoleAssistant,
+						Content: fmt.Sprintf("Conversation Summary:\n%s", summary),
+					}
+					a.messages = append(a.messages, summaryMsg)
+
+					a.messages = append(a.messages, history[historyIndex:]...)
+
+				}
+
 			}
 		}
 	}
