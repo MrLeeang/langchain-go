@@ -60,14 +60,13 @@ func (a *Agent) LoadMessages(latestUserInput string) {
 				tokenCount := 0
 				historyIndex := 0
 
-				for index, msg := range history {
-					tokenCount += tokenCounter.CountTokens(msg.Content)
+				for index := len(history) - 1; index >= 0; index-- {
+					tokenCount += tokenCounter.CountTokens(history[index].Content)
 					if tokenCount > a.maxHistoryTokens {
 						if index == 0 {
-							// 单条消息就超限，强制截断这条消息
 							historyIndex = 1
 						} else {
-							historyIndex = index - 1
+							historyIndex = index + 1
 						}
 						break
 					}
@@ -79,9 +78,15 @@ func (a *Agent) LoadMessages(latestUserInput string) {
 
 					// 触发压缩
 
-					// 保证第一条是user message
-					for historyIndex > 0 && history[historyIndex].Role != openai.ChatMessageRoleUser {
-						historyIndex--
+					// 从 historyIndex 开始向后找第一个 User 消息
+					originalIndex := historyIndex
+					for historyIndex < len(history) && history[historyIndex].Role != openai.ChatMessageRoleUser {
+						historyIndex++
+					}
+
+					// 如果没找到 User 消息，使用原始位置
+					if historyIndex >= len(history) {
+						historyIndex = originalIndex
 					}
 
 					// 生成Assistant概要消息，然后作为Assistant消息保存起来
@@ -97,15 +102,22 @@ func (a *Agent) LoadMessages(latestUserInput string) {
 					if err != nil {
 						// 如果生成概要失败，记录错误但不影响正常流程
 						fmt.Println("Error generating summary:", err)
-						return
+					} else {
+						// 将生成的概要作为Assistant消息保存到对话中
+						summaryMsg := openai.ChatCompletionMessage{
+							Role:    openai.ChatMessageRoleAssistant,
+							Content: fmt.Sprintf("[System Note: Automatic summary of previous conversation]\n\n%s", summary),
+						}
+						a.messages = append(a.messages, summaryMsg)
 					}
 
-					// 将生成的概要作为Assistant消息保存到对话中
-					summaryMsg := openai.ChatCompletionMessage{
-						Role:    openai.ChatMessageRoleAssistant,
-						Content: fmt.Sprintf("Conversation Summary:\n%s", summary),
+					// 确保摘要后跟的是 User 消息
+					if history[historyIndex].Role != openai.ChatMessageRoleUser {
+						a.messages = append(a.messages, openai.ChatCompletionMessage{
+							Role:    openai.ChatMessageRoleUser,
+							Content: "Continue from the previous conversation.",
+						})
 					}
-					a.messages = append(a.messages, summaryMsg)
 
 					a.messages = append(a.messages, history[historyIndex:]...)
 
