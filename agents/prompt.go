@@ -76,6 +76,9 @@ The output format of the skill (use_skill) and calling tool (call_tool) must str
 
 When you need a predefined workflow, choose the most suitable skill using the "use_skill" action.
 Do not execute tools when selecting a skill; you will receive workflow instructions first, then call tools in later turns if needed.
+Do not match the current skill repeatedly in the skills workflow execution!!!
+Do not match the current skill repeatedly in the skills workflow execution!!!
+Do not match the current skill repeatedly in the skills workflow execution!!!
 `
 	}
 
