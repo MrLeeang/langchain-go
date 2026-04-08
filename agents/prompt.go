@@ -62,8 +62,9 @@ The output format for skill selection and tool calling must strictly adhere to t
 Skills Use Rules
 1. When you need a predefined workflow, select the most suitable skill using "use_skill".
 2. Do not execute tools when selecting a skill; you will receive workflow instructions first.
-3. Do not re-select the same skill repeatedly within the same workflow.
-4. After receiving skill instructions, follow them exactly using "call_tool" as needed.`
+3. When using skills, please strictly follow the detailed steps of the skill.
+4. Do not re-select the same skill repeatedly within the same workflow.
+5. After receiving skill instructions, follow them exactly using "call_tool" as needed.`
 	}
 
 	// Add tools information to the prompt
