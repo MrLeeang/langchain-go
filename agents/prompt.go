@@ -67,7 +67,7 @@ The output format of the skill (use_skill) and calling tool (call_tool) must str
 		for _, skill := range skillsList {
 			prompt += fmt.Sprintf("name: %s", skill.Name)
 			if skill.Description != "" {
-				prompt += fmt.Sprintf(": %s", skill.Description)
+				prompt += fmt.Sprintf("\nDescription: %s", skill.Description)
 			}
 			prompt += "\n\n"
 		}
@@ -86,7 +86,7 @@ Skills Use Rules
 	if len(tools) > 0 {
 		prompt += "\n\nAvailable tools (execute immediately via \"call_tool\"):\n"
 		for _, tool := range tools {
-			prompt += tool.Description() + "\n"
+			prompt += "\n\n" + tool.Description() + "\n\n"
 		}
 
 		prompt += `
