@@ -82,3 +82,11 @@ func WithDebug(debug bool) AgentOption {
 		a.debug = debug
 	}
 }
+
+// WithMaxHistoryTokens sets the maximum number of tokens in the history.
+// Default is 32000.
+func WithMaxHistoryTokens(maxHistoryTokens int) AgentOption {
+	return func(a *Agent) {
+		a.maxHistoryTokens = maxHistoryTokens
+	}
+}

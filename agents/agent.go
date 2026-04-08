@@ -54,13 +54,14 @@ type Agent struct {
 //	)
 func CreateReactAgent(ctx context.Context, llm llms.LLM, opts ...AgentOption) *Agent {
 	agent := &Agent{
-		ctx:           ctx,
-		llm:           llm,
-		tools:         []mcp.Tool{}, // Default to empty tools
-		messages:      []openai.ChatCompletionMessage{},
-		maxIter:       10,
-		mem:           memory.NewBufferMemory(), // Default memory implementation
-		maxBufferSize: 200,
+		ctx:              ctx,
+		llm:              llm,
+		tools:            []mcp.Tool{}, // Default to empty tools
+		messages:         []openai.ChatCompletionMessage{},
+		maxIter:          10,
+		mem:              memory.NewBufferMemory(), // Default memory implementation
+		maxBufferSize:    200,
+		maxHistoryTokens: 32000,
 	}
 
 	// Apply options
