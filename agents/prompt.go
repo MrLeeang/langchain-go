@@ -86,10 +86,11 @@ Skills Use Rules
 	if len(tools) > 0 {
 		prompt += "\n\nAvailable tools (execute immediately via \"call_tool\"):\n"
 		for _, tool := range tools {
-			prompt += "\n\n" + tool.Description() + "\n\n"
+			prompt += "\n\n" + tool.Description() + "\n"
 		}
 
 		prompt += `
+		
 Tools Use Rules
 Here are the rules you should always follow to solve your task:
 1. Always use the right arguments for the tools. Never use variable names as the action arguments, use the value instead.
