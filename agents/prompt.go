@@ -74,10 +74,11 @@ The output format of the skill (use_skill) and calling tool (call_tool) must str
 
 		prompt += `
 
-When you need a predefined workflow, choose the most suitable skill using the "use_skill" action.
-Do not execute tools when selecting a skill; you will receive workflow instructions first, then call tools in later turns if needed.
-Do not match the current skill repeatedly in the skills workflow execution!!!
-When using skills, please output the detailed steps of the skill, do not directly call it, strictly follow the detailed steps of the skill.
+Skills Use Rules
+1. When you need a predefined workflow, choose the most suitable skill using the "use_skill" action.
+2. Do not execute tools when selecting a skill; you will receive workflow instructions first, then call tools in later turns if needed.
+3. Do not match the current skill repeatedly in the skills workflow execution!!!
+4. When using skills, please output the detailed steps of the skill, do not directly call it, strictly follow the detailed steps of the skill.
 `
 	}
 
@@ -87,6 +88,16 @@ When using skills, please output the detailed steps of the skill, do not directl
 		for _, tool := range tools {
 			prompt += tool.Description() + "\n"
 		}
+
+		prompt += `
+Tools Use Rules
+Here are the rules you should always follow to solve your task:
+1. Always use the right arguments for the tools. Never use variable names as the action arguments, use the value instead.
+2. Call a tool only when needed.
+3. If no tool call is needed, just answer the question directly.
+4. Never re-do a tool call that you previously did with the exact same parameters.
+5. For tool use, use "call_tool" action to call the tool. Do not use any other format.
+`
 	}
 
 	return prompt
