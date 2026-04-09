@@ -27,10 +27,12 @@ func (a *Agent) LoadMessages(latestUserInput string) {
 		// build system prompt
 		if len(a.tools) > 0 || len(a.skillsList) > 0 {
 			systemPrompt := buildSystemPrompt(a.tools, a.skillsList)
-			a.messages = append(a.messages, openai.ChatCompletionMessage{
-				Role:    openai.ChatMessageRoleSystem,
-				Content: systemPrompt,
-			})
+			a.messages = []openai.ChatCompletionMessage{
+				{
+					Role:    openai.ChatMessageRoleSystem,
+					Content: systemPrompt,
+				},
+			}
 
 			if a.Prompt != "" {
 				a.messages[0].Content += "\n\n# User Instructions\n" + a.Prompt
