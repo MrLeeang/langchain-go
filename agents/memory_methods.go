@@ -43,8 +43,6 @@ func (a *Agent) LoadMessages(latestUserInput string) {
 		// If so, skip loading here - it will be loaded when we have the user query
 		if milvusMem, ok := a.mem.(*memory.MilvusMemory); ok {
 
-			a.messages = []openai.ChatCompletionMessage{}
-
 			milvusMem.SetQuery(latestUserInput)
 
 			if history, err := a.mem.LoadMessages(a.ctx, a.conversationID); err == nil && len(history) > 0 {
