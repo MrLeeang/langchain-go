@@ -450,27 +450,33 @@ func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamRespon
 		// Add tool result to conversation and continue
 		toolMessage := fmt.Sprintf("Tool %s returned: %s", resp.Tool, toolResult)
 
-		// 生成概要
-		summarizer := NewSummarizer(SummarizerConfig{
-			LLM:       a.GetLLM(),
-			MaxTokens: 500,
-		})
+		tokenCounter, err := NewTokenCounter()
+		if err == nil {
+			tokenCount := tokenCounter.CountTokens(toolResult)
+			if tokenCount >= 500 {
+				// 生成概要
+				summarizer := NewSummarizer(SummarizerConfig{
+					LLM:       a.GetLLM(),
+					MaxTokens: 500,
+				})
 
-		summary, err := summarizer.GenerateSummaryWithContext(ctx, []openai.ChatCompletionMessage{
-			{
-				Role:    openai.ChatMessageRoleUser,
-				Content: toolMessage,
-			},
-		})
+				summary, err := summarizer.GenerateSummaryWithContext(ctx, []openai.ChatCompletionMessage{
+					{
+						Role:    openai.ChatMessageRoleUser,
+						Content: toolResult,
+					},
+				})
 
-		if err != nil {
-			summary = toolMessage
+				if err == nil {
+					toolMessage = fmt.Sprintf("Tool %s returned: %s", resp.Tool, summary)
+				}
+			}
 		}
 
 		// ChatMessageRoleTool
 		msg := openai.ChatCompletionMessage{
 			Role:    openai.ChatMessageRoleUser,
-			Content: summary,
+			Content: toolMessage,
 		}
 		a.messages = append(a.messages, msg)
 

@@ -54,6 +54,8 @@ func (a *Agent) LoadMessages(latestUserInput string) {
 				// 计算history的token数量
 				tokenCounter, err := NewTokenCounter()
 				if err != nil {
+					a.messages = append(a.messages, history...)
+					a.historyMessageIndex = len(a.messages)
 					return
 				}
 
