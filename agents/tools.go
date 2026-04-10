@@ -157,6 +157,13 @@ func (a *Agent) executeNativeToolCalls(ctx context.Context, ch chan<- StreamResp
 			result = "tool call failed for " + tc.Name + ": " + err.Error()
 			callToolResult.Error = true
 			callToolResult.Message = result
+		} else {
+			runes := []rune(result)
+
+			if len(runes) > 1000 {
+				// truncate result to 1000 characters to avoid overwhelming the model with too much tool output, which can lead to context window issues and degraded performance. The full result is still included in the tool_result message sent to the channel and added to the agent's messages, so the model can access it if needed.
+				result = string(runes[:1000]) + "...(truncated)"
+			}
 		}
 
 		if ch != nil {
