@@ -108,6 +108,9 @@ func (m *OpenAIModel) applyThinkingParams(params *openai.ChatCompletionNewParams
 	if strings.HasPrefix(m.model, "kimi-") {
 		ex["thinking"] = map[string]any{"type": "disabled"}
 	}
+
+	ex["chat_template_kwargs"] = map[string]any{"enable_thinking": false}
+
 	params.SetExtraFields(ex)
 }
 
