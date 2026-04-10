@@ -30,7 +30,6 @@ type Agent struct {
 	Duration            time.Duration
 	StartTime           time.Time
 	EndTime             time.Time
-	maxBufferSize       int
 	debug               bool
 	// registeredSkills lists skill metadata (name, description, path) injected into the system prompt so the model can read the full .md via tools such as read_file.
 	registeredSkills []skills.Skill
@@ -59,7 +58,6 @@ func CreateReactAgent(ctx context.Context, llm llms.LLM, opts ...AgentOption) *A
 		messages:         []llms.ChatCompletionMessage{},
 		maxIter:          10,
 		mem:              memory.NewBufferMemory(), // Default memory implementation
-		maxBufferSize:    200,
 		maxHistoryTokens: 32000,
 	}
 

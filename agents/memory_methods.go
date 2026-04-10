@@ -53,19 +53,11 @@ func (a *Agent) LoadMessages(latestUserInput string) {
 		} else {
 			if history, err := a.mem.LoadMessages(a.ctx, a.conversationID); err == nil && len(history) > 0 {
 
-				// 计算history的token数量
-				tokenCounter, err := NewTokenCounter()
-				if err != nil {
-					a.messages = append(a.messages, history...)
-					a.historyMessageIndex = len(a.messages)
-					return
-				}
-
 				tokenCount := 0
 				historyIndex := 0
 
 				for index := len(history) - 1; index >= 0; index-- {
-					tokenCount += tokenCounter.CountTokens(history[index].Content)
+					tokenCount += CountTokens(history[index].Content)
 					if tokenCount > a.maxHistoryTokens {
 						if index == 0 {
 							historyIndex = 1
@@ -93,21 +85,21 @@ func (a *Agent) LoadMessages(latestUserInput string) {
 						historyIndex = originalIndex
 					}
 
-					// 生成Assistant概要消息，然后作为Assistant消息保存起来
-					// 创建概要生成器（使用已有的大模型）
+					// generate summary for messages before historyIndex to save tokens, and keep the conversation context in the remaining messages
+					// initialize summarizer with the same LLM as the agent, and a reasonable max token limit for summaries
 					summarizer := NewSummarizer(SummarizerConfig{
 						LLM:       a.GetLLM(), // 复用现有大模型
-						MaxTokens: 1000,
+						MaxTokens: 2000,
 					})
 
-					// 生成概要
+					// generate summary with context (only summarize the messages that are being removed to save tokens)
 					summary, err := summarizer.GenerateSummaryWithContext(a.ctx, history[:historyIndex])
 
 					if err != nil {
-						// 如果生成概要失败，记录错误但不影响正常流程
+						// if summary generation fails, we can choose to either skip saving the summary or save an error message as a system note
 						fmt.Println("Error generating summary:", err)
 					} else {
-						// 将生成的概要作为Assistant消息保存到对话中
+						// save the summary as an Assistant message in the conversation history, so it can be used in future interactions
 						summaryMsg := llms.ChatCompletionMessage{
 							Role:    llms.ChatMessageRoleAssistant,
 							Content: fmt.Sprintf("[System Note: Automatic summary of previous conversation]\n\n%s", summary),
@@ -115,7 +107,7 @@ func (a *Agent) LoadMessages(latestUserInput string) {
 						a.messages = append(a.messages, summaryMsg)
 					}
 
-					// 确保摘要后跟的是 User 消息
+					// find the first User message in the remaining history to ensure the conversation flow is correct
 					if history[historyIndex].Role != llms.ChatMessageRoleUser {
 						a.messages = append(a.messages, llms.ChatCompletionMessage{
 							Role:    llms.ChatMessageRoleUser,
@@ -125,8 +117,19 @@ func (a *Agent) LoadMessages(latestUserInput string) {
 
 					a.messages = append(a.messages, history[historyIndex:]...)
 
-				}
+					// clear memory and save the new messages with summary
+					if err := a.mem.ClearMessages(a.ctx, a.conversationID); err != nil {
+						fmt.Println("Error clearing memory:", err)
+					} else {
+						if len(a.messages) > 1 {
+							// saveMessages expects messages without system prompt, so we skip the first message
+							if err := a.mem.SaveMessages(a.ctx, a.conversationID, a.messages[1:]); err != nil {
+								fmt.Println("Error saving messages to memory:", err)
+							}
+						}
+					}
 
+				}
 			}
 		}
 	}

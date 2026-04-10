@@ -44,20 +44,14 @@ func (a *Agent) CalculateCompletionTokenUsage(usage llms.ChatUsage) {
 	a.TotalTokens += usage.TotalTokens
 }
 
-type TokenCounter struct {
-	encoder *tiktoken.Tiktoken
-}
+func CountTokens(text string) int {
 
-func NewTokenCounter() (*TokenCounter, error) {
-	// DeepSeek 使用 cl100k_base 编码，与 GPT-4 相同
 	enc, err := tiktoken.GetEncoding("cl100k_base")
 	if err != nil {
-		return nil, err
+		return 1000 // if encoding fails, return a large number to be safe
 	}
-	return &TokenCounter{encoder: enc}, nil
-}
 
-func (tc *TokenCounter) CountTokens(text string) int {
-	tokens := tc.encoder.Encode(text, nil, nil)
+	tokens := enc.Encode(text, nil, nil)
+
 	return len(tokens)
 }

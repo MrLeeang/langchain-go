@@ -59,14 +59,6 @@ func WithConversationID(conversationID string) AgentOption {
 	}
 }
 
-// WithUseToolDataLength sets the length of the data that will be used to call the tool.
-// Default is 200.
-func WithMaxBufferSize(maxBufferSize int) AgentOption {
-	return func(a *Agent) {
-		a.maxBufferSize = maxBufferSize
-	}
-}
-
 // WithDebug sets the debug mode for the agent.
 // Default is false.
 func WithDebug(debug bool) AgentOption {
