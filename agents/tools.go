@@ -139,9 +139,9 @@ func (a *Agent) executeNativeToolCalls(ctx context.Context, ch chan<- StreamResp
 		if ch != nil {
 			// send json message to channel
 			jsonMessage, err := json.Marshal(map[string]interface{}{
-				"type": "call_tool",
-				"tool": tc.Name,
-				"args": args,
+				"action": "call_tool",
+				"tool":   tc.Name,
+				"args":   args,
 			})
 			if err == nil {
 				ch <- StreamResponse{Content: "\n"}
