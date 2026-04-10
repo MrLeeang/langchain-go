@@ -8,7 +8,8 @@ import (
 
 	"github.com/milvus-io/milvus-sdk-go/v2/client"
 	"github.com/milvus-io/milvus-sdk-go/v2/entity"
-	openai "github.com/sashabaranov/go-openai"
+
+	"github.com/MrLeeang/langchain-go/llms"
 )
 
 type MilvusMemoryInterface interface {
@@ -241,7 +242,7 @@ func (m *MilvusMemory) getConversationID(conversationID string) string {
 // If EnableQueryBasedLoading is true, it will use the latest user input
 // (captured from SaveMessages) to retrieve relevant messages via vector similarity search.
 // Otherwise, it returns all messages in chronological order.
-func (m *MilvusMemory) LoadMessages(ctx context.Context, conversationID string) ([]openai.ChatCompletionMessage, error) {
+func (m *MilvusMemory) LoadMessages(ctx context.Context, conversationID string) ([]llms.ChatCompletionMessage, error) {
 	// If query-based loading is enabled, use the latest user input as query
 	if m.EnableQueryBasedLoading {
 		m.mutex.RLock()
@@ -274,7 +275,7 @@ func (m *MilvusMemory) SetQuery(query string) {
 }
 
 // loadAllMessages loads all messages for the conversation ID in chronological order.
-func (m *MilvusMemory) loadAllMessages(ctx context.Context, conversationID string) ([]openai.ChatCompletionMessage, error) {
+func (m *MilvusMemory) loadAllMessages(ctx context.Context, conversationID string) ([]llms.ChatCompletionMessage, error) {
 	convID := m.getConversationID(conversationID)
 
 	// Query by conversation_id, ordered by timestamp
@@ -295,8 +296,8 @@ func (m *MilvusMemory) loadAllMessages(ctx context.Context, conversationID strin
 }
 
 // assembleMessagesFromColumns converts Milvus query results to messages.
-func (m *MilvusMemory) assembleMessagesFromColumns(results []entity.Column) ([]openai.ChatCompletionMessage, error) {
-	messages := make([]openai.ChatCompletionMessage, 0)
+func (m *MilvusMemory) assembleMessagesFromColumns(results []entity.Column) ([]llms.ChatCompletionMessage, error) {
+	messages := make([]llms.ChatCompletionMessage, 0)
 
 	var userInputCol, llmOutputCol *entity.ColumnVarChar
 
@@ -327,14 +328,14 @@ func (m *MilvusMemory) assembleMessagesFromColumns(results []entity.Column) ([]o
 		}
 
 		// Add user message
-		messages = append(messages, openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleUser,
+		messages = append(messages, llms.ChatCompletionMessage{
+			Role:    llms.ChatMessageRoleUser,
 			Content: userInput,
 		})
 
 		// Add assistant message
-		messages = append(messages, openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleAssistant,
+		messages = append(messages, llms.ChatCompletionMessage{
+			Role:    llms.ChatMessageRoleAssistant,
 			Content: llmOutput,
 		})
 	}
@@ -355,7 +356,7 @@ func (m *MilvusMemory) SetLatestUserInput(conversationID string, userInput strin
 
 // SaveMessages saves messages to the conversation history.
 // It pairs user messages with assistant messages and stores them as Q&A pairs in Milvus.
-func (m *MilvusMemory) SaveMessages(ctx context.Context, conversationID string, messages []openai.ChatCompletionMessage) error {
+func (m *MilvusMemory) SaveMessages(ctx context.Context, conversationID string, messages []llms.ChatCompletionMessage) error {
 	if len(messages) == 0 {
 		return nil
 	}
@@ -377,7 +378,7 @@ func (m *MilvusMemory) SaveMessages(ctx context.Context, conversationID string, 
 
 	for _, msg := range messages {
 		switch msg.Role {
-		case openai.ChatMessageRoleUser:
+		case llms.ChatMessageRoleUser:
 			// Save the latest user input for query-based loading
 			m.mutex.Lock()
 			m.latestUserInput = msg.Content
@@ -386,7 +387,7 @@ func (m *MilvusMemory) SaveMessages(ctx context.Context, conversationID string, 
 			// If we have a previous user input without output, we'll store it with empty output
 			// Otherwise, start a new pair
 			m.SetLatestUserInput(conversationID, msg.Content)
-		case openai.ChatMessageRoleAssistant:
+		case llms.ChatMessageRoleAssistant:
 			// If we have a user input, pair it with this assistant response
 			if latestUserInput[conversationID] != "" && msg.Content != "" {
 				pairs = append(pairs, QAPair{
@@ -396,7 +397,7 @@ func (m *MilvusMemory) SaveMessages(ctx context.Context, conversationID string, 
 				})
 				m.SetLatestUserInput(conversationID, "") // Reset after pairing
 			}
-		case openai.ChatMessageRoleSystem:
+		case llms.ChatMessageRoleSystem:
 			// System messages are handled separately, skip for now
 			continue
 		}
@@ -475,7 +476,7 @@ func (m *MilvusMemory) ClearMessages(ctx context.Context, conversationID string)
 
 // GetRelevantMessages retrieves relevant messages from history based on a query.
 // It uses vector similarity search to find the most relevant Q&A pairs and assembles them.
-func (m *MilvusMemory) GetRelevantMessages(ctx context.Context, conversationID string, query string, limit int) ([]openai.ChatCompletionMessage, error) {
+func (m *MilvusMemory) GetRelevantMessages(ctx context.Context, conversationID string, query string, limit int) ([]llms.ChatCompletionMessage, error) {
 	convID := m.getConversationID(conversationID)
 
 	// Generate embedding for query
@@ -517,7 +518,7 @@ func (m *MilvusMemory) GetRelevantMessages(ctx context.Context, conversationID s
 	}
 
 	// Convert Q&A pairs to messages
-	messages := make([]openai.ChatCompletionMessage, 0)
+	messages := make([]llms.ChatCompletionMessage, 0)
 	for _, result := range searchResults {
 		// Extract fields from result columns
 		var userInputCol, llmOutputCol *entity.ColumnVarChar
@@ -545,8 +546,8 @@ func (m *MilvusMemory) GetRelevantMessages(ctx context.Context, conversationID s
 				}
 
 				// Add user message
-				messages = append(messages, openai.ChatCompletionMessage{
-					Role:    openai.ChatMessageRoleUser,
+				messages = append(messages, llms.ChatCompletionMessage{
+					Role:    llms.ChatMessageRoleUser,
 					Content: userInput,
 				})
 
@@ -554,8 +555,8 @@ func (m *MilvusMemory) GetRelevantMessages(ctx context.Context, conversationID s
 				if llmOutputColActual != nil {
 					llmOutputVal, _ := llmOutputColActual.Get(i)
 					if llmOutput, ok := llmOutputVal.(string); ok && llmOutput != "" {
-						messages = append(messages, openai.ChatCompletionMessage{
-							Role:    openai.ChatMessageRoleAssistant,
+						messages = append(messages, llms.ChatCompletionMessage{
+							Role:    llms.ChatMessageRoleAssistant,
 							Content: llmOutput,
 						})
 					}

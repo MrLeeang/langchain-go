@@ -1,6 +1,7 @@
 package agents
 
 import (
+	"github.com/MrLeeang/langchain-go/llms"
 	"github.com/pkoukk/tiktoken-go"
 )
 
@@ -36,30 +37,11 @@ func (a *Agent) AddTokenUsage(totalTokens int, promptTokens int, completionToken
 	a.CompletionTokens += completionTokens
 }
 
-// Calculate token usage from response
-func (a *Agent) CalculatePromptTokenUsage(text string) {
-	tokenCounter, err := NewTokenCounter()
-	if err != nil {
-		return
-	}
-	a.PromptTokens += tokenCounter.CountTokens(text)
-
-	a.CalculateTotalTokenUsage()
-}
-
 // Calculate completion token usage from response
-func (a *Agent) CalculateCompletionTokenUsage(text string) {
-	tokenCounter, err := NewTokenCounter()
-	if err != nil {
-		return
-	}
-	a.CompletionTokens += tokenCounter.CountTokens(text)
-
-	a.CalculateTotalTokenUsage()
-}
-
-func (a *Agent) CalculateTotalTokenUsage() {
-	a.TotalTokens = a.PromptTokens + a.CompletionTokens
+func (a *Agent) CalculateCompletionTokenUsage(usage llms.ChatUsage) {
+	a.CompletionTokens += usage.CompletionTokens
+	a.PromptTokens += usage.PromptTokens
+	a.TotalTokens += usage.TotalTokens
 }
 
 type TokenCounter struct {

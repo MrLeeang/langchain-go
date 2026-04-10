@@ -17,6 +17,14 @@ func WithTools(tools []mcp.Tool) AgentOption {
 	}
 }
 
+// WithSkills registers skill metadata (from skills.LoadFiles / LoadDirectory) into the system prompt.
+// The agent does not load file contents itself: the model should use read_file (or the MCP file tool) with the given path to read the full Markdown playbook.
+func WithSkills(s []skills.Skill) AgentOption {
+	return func(a *Agent) {
+		a.registeredSkills = s
+	}
+}
+
 // WithMaxIterations sets the maximum number of tool-calling iterations.
 // Default is 10.
 func WithMaxIterations(maxIter int) AgentOption {
@@ -56,22 +64,6 @@ func WithConversationID(conversationID string) AgentOption {
 func WithMaxBufferSize(maxBufferSize int) AgentOption {
 	return func(a *Agent) {
 		a.maxBufferSize = maxBufferSize
-	}
-}
-
-// WithSkills sets the skills that the agent can use for task orchestration.
-// Skills are loaded from markdown documents and automatically injected into the system prompt.
-//
-// Example:
-//
-//	skills, _ := skills.Load("./skills")
-//	agent := agents.CreateReactAgent(ctx, llm,
-//	    agents.WithTools(tools),
-//	    agents.WithSkills(skills),
-//	)
-func WithSkills(skillsList []skills.Skill) AgentOption {
-	return func(a *Agent) {
-		a.skillsList = skillsList
 	}
 }
 

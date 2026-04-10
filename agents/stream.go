@@ -2,17 +2,20 @@ package agents
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/MrLeeang/langchain-go/llms"
-
-	openai "github.com/sashabaranov/go-openai"
 )
+
+// streamToolCallBuffer accumulates one tool_call across streamed chunks (by tool index).
+type streamToolCallBuffer struct {
+	id, typ, name, args string
+}
 
 // StreamResponse represents a single chunk of streamed content from the agent.
 type StreamResponse struct {
@@ -31,7 +34,9 @@ type StreamResponse struct {
 }
 
 // Stream processes a user message and returns a channel that streams the agent's response.
-// This method supports streaming for direct answers but requires complete responses for tool calls.
+// Assistant text is streamed token-wise. Tool calls are accumulated per chunk index (name and
+// arguments concatenated across chunks); when finish_reason is tool_calls, the stream round
+// ends early, tools execute, then the outer loop continues for the model's next reply.
 //
 // Example:
 //
@@ -78,72 +83,25 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 			time.Sleep(1 * time.Second)
 			close(ch)
 
-			// 生成Assistant概要消息，然后作为Assistant消息保存起来
-			// 创建概要生成器（使用已有的大模型）
-			// summarizer := NewSummarizer(SummarizerConfig{
-			// 	LLM:       a.GetLLM(),
-			// 	MaxTokens: 500,
-			// })
-
-			// // 生成概要
-			// summary, err := summarizer.GenerateSummaryWithContext(ctx, a.messages[a.historyMessageIndex:])
-
-			// if err != nil {
-			// 	// 如果生成概要失败，记录错误但不影响正常流程
-			// 	fmt.Println("Error generating summary:", err)
-			// 	return
-			// }
-
-			// // 将生成的概要作为Assistant消息保存到对话中
-			// summaryMsg := openai.ChatCompletionMessage{
-			// 	Role:    openai.ChatMessageRoleAssistant,
-			// 	Content: fmt.Sprintf("Conversation Summary:\n%s", summary),
-			// }
-			// a.messages = append(a.messages, summaryMsg)
-
-			// // 可选：将概要消息保存到内存中，以便后续查询使用
-			// if a.mem != nil && a.conversationID != "" {
-			// 	if err := a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{summaryMsg}); err != nil {
-			// 		fmt.Println("Error saving summary to memory:", err)
-			// 	}
-			// }
-
-			// 存储原始消息到内存
 			if a.mem != nil && a.conversationID != "" {
 				// user message already saved to memory in handleStreamResponse
-				if err := a.mem.SaveMessages(ctx, a.conversationID, a.messages[a.historyMessageIndex+1:]); err != nil {
+				if err := a.mem.SaveMessages(ctx, a.conversationID, a.messages[a.historyMessageIndex:]); err != nil {
 					fmt.Println("Error saving messages to memory:", err)
 				}
 			}
-
 		}()
 
-		userMsg := openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleUser,
+		userMsg := llms.ChatCompletionMessage{
+			Role:    llms.ChatMessageRoleUser,
 			Content: message,
 		}
 		a.messages = append(a.messages, userMsg)
 
-		// Calculate prompt token usage for all messages
-		for _, msg := range a.messages {
-			if msg.Role == openai.ChatMessageRoleUser || msg.Role == openai.ChatMessageRoleSystem || msg.Role == openai.ChatMessageRoleTool {
-				a.CalculatePromptTokenUsage(msg.Content)
-			}
-		}
-
-		// Save user message to memory
-		if a.mem != nil && a.conversationID != "" {
-			if err := a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{userMsg}); err != nil {
-				// Log error but continue
-			}
-		}
-
 		iterations := 0
 		for iterations < a.maxIter {
 			iterations++
+			finishReason := ""
 
-			// If the context has been cancelled (via Stop or parent ctx),
-			// abort early.
 			if err := ctx.Err(); err != nil {
 
 				if err == context.Canceled {
@@ -155,51 +113,14 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 				return
 			}
 
-			// Check if LLM supports streaming
-			streamer, ok := a.llm.(llms.ChatStreamer)
-			if !ok {
-				// Fallback to non-streaming if LLM doesn't support streaming
-				resp, err := a.llm.Chat(ctx, a.messages)
-				if err != nil {
-					ch <- StreamResponse{Error: fmt.Errorf("failed to get LLM response: %w", err)}
-					return
-				}
-
-				if len(resp.Choices) == 0 {
-					ch <- StreamResponse{Error: fmt.Errorf("no response from LLM")}
-					return
-				}
-
-				output := resp.Choices[0].Message.Content
-				result, shouldContinue, err := a.handleLLMResponse(ctx, output)
-				if err != nil {
-					ch <- StreamResponse{Error: err}
-					return
-				}
-
-				if !shouldContinue {
-					ch <- StreamResponse{Done: true}
-					return
-				}
-
-				if result != "" {
-					ch <- StreamResponse{Content: result}
-				}
-			}
-
-			// Use streaming
-			stream, err := streamer.ChatStream(ctx, a.messages)
+			stream, err := a.chatStream(ctx)
 			if err != nil {
-				ch <- StreamResponse{Error: fmt.Errorf("failed to create stream: %w", err)}
-
+				ch <- StreamResponse{Error: fmt.Errorf("failed to create stream: %w", err), Done: true}
 				return
 			}
 
-			var fullContent string
-
-			buffer := ""
-			isAssistantContent := false
-			toolJSONStartFound := false
+			toolCallsBuffer := make(map[int]*streamToolCallBuffer)
+			var fullContent strings.Builder
 
 			for {
 				response, err := stream.Recv()
@@ -210,330 +131,131 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 				if err == context.Canceled {
 					stream.Close()
 					ch <- StreamResponse{Done: true}
-					a.CalculateCompletionTokenUsage(fullContent)
 					return
 				}
 
 				if err != nil {
 					stream.Close()
-					ch <- StreamResponse{Error: fmt.Errorf("stream error: %w", err)}
+					ch <- StreamResponse{Error: fmt.Errorf("stream error: %w", err), Done: true}
 					return
 				}
 
-				if len(response.Choices) > 0 && response.Choices[0].Delta.ReasoningContent != "" {
-					ch <- StreamResponse{ReasoningContent: response.Choices[0].Delta.ReasoningContent}
+				if len(response.Choices) == 0 {
+					continue
 				}
 
-				if len(response.Choices) > 0 && response.Choices[0].Delta.Content != "" {
-					content := response.Choices[0].Delta.Content
-					fullContent += content
+				ch0 := response.Choices[0]
+				delta := ch0.Delta
+				if ch0.FinishReason != "" {
+					finishReason = ch0.FinishReason
+				}
 
-					if a.debug {
-						ch <- StreamResponse{Content: content}
-						continue
+				if delta.ReasoningContent != "" {
+					ch <- StreamResponse{ReasoningContent: delta.ReasoningContent}
+				}
+
+				if delta.Content != "" {
+					fullContent.WriteString(delta.Content)
+					ch <- StreamResponse{Content: delta.Content}
+				}
+
+				for _, tc := range delta.ToolCalls {
+					idx := tc.Index
+					buf, exists := toolCallsBuffer[idx]
+					if !exists {
+						buf = &streamToolCallBuffer{}
+						toolCallsBuffer[idx] = buf
 					}
-
-					// If we've already determined it's plain assistant text, stream through
-					if isAssistantContent {
-						ch <- StreamResponse{Content: content}
-						continue
+					if tc.ID != "" {
+						buf.id = tc.ID
 					}
+					if tc.Type != "" {
+						buf.typ = tc.Type
+					}
+					buf.name += tc.NameFragment
+					buf.args += tc.ArgumentsFragment
 
-					// Accumulate and detect tool JSON that may start mid-stream
-					buffer += content
-
-					// If we haven't started parsing JSON yet, look for the start marker
-					if !toolJSONStartFound {
-						flag := `{"action"`
-
-						if len(buffer) > len(flag) {
-							idx := strings.Index(buffer, flag)
-							if idx != -1 {
-								// found JSON
-								if idx > 0 {
-									ch <- StreamResponse{Content: buffer[:idx]}
-								}
-
-								// Keep only the JSON part in buffer going forward
-								buffer = buffer[idx:]
-								toolJSONStartFound = true
-
-							} else {
-								// not found, output one character to slide
-								bufferRunes := []rune(buffer)
-								flagRunes := []rune(flag)
-
-								if len(bufferRunes) > len(flagRunes) {
-									ch <- StreamResponse{Content: string(bufferRunes[:len(bufferRunes)-len(flagRunes)])}
-									buffer = string(bufferRunes[len(bufferRunes)-len(flagRunes):])
-								}
-
-							}
+					if buf.name != "" {
+						if a.debug {
+							ch <- StreamResponse{Content: fmt.Sprintf("\n[工具调用中: %s, 参数: %s]\n", buf.name, buf.args)}
 						}
-
-					}
-
-					// If we're inside a JSON tool payload, track braces until complete
-					if toolJSONStartFound {
-						// tool use found, return the tool use
 					}
 				}
-			}
 
-			if len(buffer) > 0 && !toolJSONStartFound {
-				// stream end but buffer is not empty, output the buffer
-				ch <- StreamResponse{Content: buffer}
-				buffer = ""
+				if response.Usage != nil {
+					a.CalculateCompletionTokenUsage(*response.Usage)
+				}
+
+				if strings.EqualFold(ch0.FinishReason, "tool_calls") {
+					if a.debug {
+						fmt.Println("\n[模型请求调用工具，流结束]")
+					}
+					break
+				}
 			}
 
 			stream.Close()
 
-			// Process the complete response (handleStreamResponse will save the message)
-			if fullContent != "" {
-
-				a.CalculateCompletionTokenUsage(fullContent)
-
-				// Check if this is a final answer or tool call
-				// handleStreamResponse will save the assistant message to memory
-				_, shouldContinue, err := a.handleStreamResponse(ctx, ch, fullContent)
-				if err != nil {
-					ch <- StreamResponse{Error: err}
-					return
-				}
-
-				if !shouldContinue {
-					// Final answer - already streamed, just mark as done
-					ch <- StreamResponse{Done: true}
-					return
-				}
-
-				// Tool call detected and handled - continue iteration
-				// The tool result has already been sent to channel in handleStreamResponse
+			assistantMsg := llms.ChatCompletionMessage{
+				Role:      llms.ChatMessageRoleAssistant,
+				Content:   fullContent.String(),
+				ToolCalls: toolCallsSortedFromBuffer(toolCallsBuffer),
 			}
+
+			if strings.EqualFold(finishReason, "tool_calls") && len(assistantMsg.ToolCalls) == 0 {
+				ch <- StreamResponse{
+					Error: fmt.Errorf("model finished with tool_calls but no function name was accumulated from stream deltas"),
+					Done:  true,
+				}
+				return
+			}
+
+			if a.debug {
+				fmt.Println("\n=============stream accumulated assistant============")
+				fmt.Printf("Content: %q tool_calls: %d\n", assistantMsg.Content, len(assistantMsg.ToolCalls))
+				fmt.Println("=============stream accumulated assistant============")
+			}
+
+			a.messages = append(a.messages, assistantMsg)
+
+			if len(assistantMsg.ToolCalls) > 0 {
+				if err := a.executeNativeToolCalls(ctx, ch, assistantMsg.ToolCalls); err != nil {
+					ch <- StreamResponse{Error: err, Done: true}
+					return
+				}
+				continue
+			}
+
+			ch <- StreamResponse{Done: true}
+			return
 		}
 
-		ch <- StreamResponse{Error: fmt.Errorf("max iterations (%d) exceeded", a.maxIter)}
+		ch <- StreamResponse{Error: fmt.Errorf("max iterations (%d) exceeded", a.maxIter), Done: true}
 	}()
 
 	return ch
 }
 
-// handleStreamResponse handles a complete LLM response in streaming context.
-// It returns the result, whether to continue, and any error.
-// For tool calls, it executes the tool and sends the result through the channel.
-func (a *Agent) handleStreamResponse(ctx context.Context, ch chan<- StreamResponse, response string) (string, bool, error) {
-	var resp struct {
-		Action string                 `json:"action"`
-		Tool   string                 `json:"tool,omitempty"`
-		Skill  string                 `json:"skill,omitempty"`
-		Args   map[string]interface{} `json:"args,omitempty"`
+func toolCallsSortedFromBuffer(m map[int]*streamToolCallBuffer) []llms.ChatToolCall {
+	if len(m) == 0 {
+		return nil
 	}
-
-	// Save assistant message to memory first
-	if response != "" {
-		assistantMsg := openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleAssistant,
-			Content: response,
-		}
-		a.messages = append(a.messages, assistantMsg)
-
-		// if a.mem != nil && a.conversationID != "" {
-		// 	_ = a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{assistantMsg})
-		// }
+	keys := make([]int, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
 	}
-
-	if a.debug {
-		fmt.Println("\n=============handleStreamResponse============")
-		fmt.Println("handleStreamResponse: ", response)
-		fmt.Println("=============handleStreamResponse============")
+	sort.Ints(keys)
+	out := make([]llms.ChatToolCall, 0, len(keys))
+	for _, k := range keys {
+		b := m[k]
+		if strings.TrimSpace(b.name) == "" {
+			continue
+		}
+		out = append(out, llms.ChatToolCall{
+			ID:        b.id,
+			Name:      b.name,
+			Arguments: b.args,
+		})
 	}
-
-	// find action json in response
-	callToolJson := ""
-	idx := strings.Index(response, `{"action":`)
-	if idx != -1 {
-		callToolJson = response[idx:]
-	}
-
-	if callToolJson == "" {
-		if a.debug {
-			fmt.Println("\ncallToolJson is empty: ", response)
-		}
-		return response, false, nil
-	}
-
-	callToolJson = thoroughlyCleanJSON(callToolJson)
-
-	if callToolJson != "" {
-		err := json.Unmarshal([]byte(callToolJson), &resp)
-		if err != nil {
-			if a.debug {
-				fmt.Println("=============unmarshalling============")
-				fmt.Println("error unmarshalling callToolJson: ", err, ", callToolJson: ", callToolJson)
-				fmt.Println("=============unmarshalling============")
-			}
-			return response, false, nil
-		}
-	}
-
-	switch resp.Action {
-	case "use_skill":
-		if resp.Skill == "" {
-			return "", false, fmt.Errorf("skill name is required for use_skill action")
-		}
-
-		// Execute the selected skill to get detailed instructions
-		instructions, err := a.ExecuteSkill(ctx, resp.Skill, resp.Args)
-		if err != nil {
-			return "", false, fmt.Errorf("failed to execute skill %s: %w", resp.Skill, err)
-		}
-
-		// Inject skill instructions as a new system message
-		skillMsg := openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleUser,
-			Content: instructions,
-		}
-		a.messages = append(a.messages, skillMsg)
-
-		// skills context does not need to be saved to memory
-		// Save skill instructions to memory
-		// if a.mem != nil && a.conversationID != "" {
-		// 	_ = a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{skillMsg})
-		// }
-
-		// Optionally, send the skill instructions to the stream for transparency
-		// ch <- StreamResponse{Content: "\n"}
-		// ch <- StreamResponse{Content: instructions}
-		// ch <- StreamResponse{Content: "\n"}
-
-		return "", true, nil
-
-	case "call_tool":
-		if resp.Tool == "" {
-			// if a.debug {
-			// 	fmt.Println("\ntool name is required for call_tool action")
-			// }
-			return "", false, fmt.Errorf("tool name is required for call_tool action")
-		}
-
-		callToolResult := a.newCallToolResult(resp.Tool, resp.Args)
-
-		// Send notification about tool call, json string
-
-		ch <- StreamResponse{Content: "\n"}
-		ch <- StreamResponse{Content: callToolJson}
-
-		tool := a.findTool(resp.Tool)
-		if tool == nil {
-			ch <- StreamResponse{Content: "\n"}
-			callToolResult.Error = true
-			callToolResult.Message = fmt.Sprintf("tool '%s' not found", resp.Tool)
-			ch <- StreamResponse{Content: callToolResult.String()}
-			return "", false, fmt.Errorf("tool not found: %s", resp.Tool)
-		}
-
-		toolResult, err := tool.Call(ctx, resp.Args)
-		if err != nil {
-			callToolResult.Error = true
-			callToolResult.Message = fmt.Sprintf("tool call failed for %s: %v", resp.Tool, err)
-			ch <- StreamResponse{Content: "\n"}
-			ch <- StreamResponse{Content: callToolResult.String()}
-			return "", false, fmt.Errorf("tool call failed for %s: %w", resp.Tool, err)
-		}
-
-		// Send tool result through channel
-		ch <- StreamResponse{Content: "\n"}
-		callToolResult.Result = toolResult
-		ch <- StreamResponse{Content: callToolResult.String()}
-		ch <- StreamResponse{Content: "\n"}
-
-		// Add tool result to conversation and continue
-		toolMessage := fmt.Sprintf("Tool %s returned: %s", resp.Tool, toolResult)
-
-		tokenCounter, err := NewTokenCounter()
-		if err == nil {
-			tokenCount := tokenCounter.CountTokens(toolResult)
-			if tokenCount >= 500 {
-				// 生成概要
-				summarizer := NewSummarizer(SummarizerConfig{
-					LLM:       a.GetLLM(),
-					MaxTokens: 500,
-				})
-
-				summary, err := summarizer.GenerateSummaryWithContext(ctx, []openai.ChatCompletionMessage{
-					{
-						Role:    openai.ChatMessageRoleUser,
-						Content: toolResult,
-					},
-				})
-
-				if err == nil {
-					toolMessage = fmt.Sprintf("Tool %s returned: %s", resp.Tool, summary)
-				}
-			}
-		}
-
-		// ChatMessageRoleTool
-		msg := openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleUser,
-			Content: toolMessage,
-		}
-		a.messages = append(a.messages, msg)
-
-		// Save tool message to memory
-		// if a.mem != nil && a.conversationID != "" {
-		// 	_ = a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{msg})
-		// }
-
-		return "", true, nil
-
-	default:
-		// Unknown action, treat as final answer
-		return response, false, nil
-	}
-}
-
-// handleLLMResponse handles a complete LLM response (non-streaming fallback).
-func (a *Agent) handleLLMResponse(ctx context.Context, output string) (string, bool, error) {
-	assistantMsg := openai.ChatCompletionMessage{
-		Role:    openai.ChatMessageRoleAssistant,
-		Content: output,
-	}
-	a.messages = append(a.messages, assistantMsg)
-
-	// Save assistant message to memory
-	// if a.mem != nil && a.conversationID != "" {
-	// 	_ = a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{assistantMsg})
-	// }
-
-	return a.parseLLMResponse(ctx, output)
-}
-
-// call tool result data
-type callToolResult struct {
-	Action  string                 `json:"action"`
-	Tool    string                 `json:"tool"`
-	Args    map[string]interface{} `json:"args"`
-	Result  string                 `json:"result"`
-	Error   bool                   `json:"error"`
-	Message string                 `json:"message"`
-}
-
-func (c *callToolResult) String() string {
-	json, err := json.Marshal(c)
-	if err != nil {
-		return ""
-	}
-	return string(json)
-}
-
-func (a *Agent) newCallToolResult(tool string, args map[string]interface{}) *callToolResult {
-	return &callToolResult{
-		Action:  "tool_result",
-		Tool:    tool,
-		Args:    args,
-		Result:  "",
-		Error:   false,
-		Message: "",
-	}
+	return out
 }

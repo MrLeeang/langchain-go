@@ -8,7 +8,7 @@ A Go implementation of LangChain-style agents for building AI applications with 
 - 🛠️ **MCP Tool Integration** - Seamless integration with Model Context Protocol (MCP) tools
 - 💾 **Flexible Memory Management** - Pluggable memory backends (in-memory, Redis, database, etc.)
 - 🌊 **Streaming Support** - Real-time streaming responses for better UX
-- 🔌 **Multiple LLM Providers** - Support for OpenAI-compatible APIs and Ollama
+- 🔌 **OpenAI-compatible APIs** - Chat and embeddings via the official OpenAI Go SDK
 - 🎯 **Simple API** - Clean, intuitive API design following Go best practices
 - 📦 **Modular Design** - Well-structured packages for easy extension
 
@@ -98,8 +98,7 @@ Agents are the core abstraction that orchestrate LLM interactions and tool usage
 
 The library supports multiple LLM providers through a unified interface:
 
-- **OpenAI & Compatible APIs** (DeepSeek, Anthropic via proxy, etc.)
-- **Ollama** (Local LLM models)
+- **OpenAI & compatible HTTP APIs** (DeepSeek, local gateways, etc.)
 
 ### Memory
 
@@ -145,11 +144,11 @@ type MyMemory struct {
     // your storage implementation
 }
 
-func (m *MyMemory) LoadMessages(ctx context.Context, id string) ([]openai.ChatCompletionMessage, error) {
+func (m *MyMemory) LoadMessages(ctx context.Context, id string) ([]llms.ChatCompletionMessage, error) {
     // load from your storage
 }
 
-func (m *MyMemory) SaveMessages(ctx context.Context, id string, msgs []openai.ChatCompletionMessage) error {
+func (m *MyMemory) SaveMessages(ctx context.Context, id string, msgs []llms.ChatCompletionMessage) error {
     // save to your storage
 }
 
@@ -164,19 +163,6 @@ agent := agents.CreateReactAgent(ctx, llm,
 )
 ```
 
-### Using Ollama (Local LLM)
-
-```go
-// No API key needed!
-llm := llms.NewOllamaModel(llms.Config{
-    BaseURL: "http://localhost:11434", // Default Ollama endpoint
-    Model:   "llama2",                  // or "mistral", "codellama", etc.
-})
-
-agent := agents.CreateReactAgent(ctx, llm)
-response, _ := agent.Run("Hello!")
-```
-
 ## Examples
 
 Check out the `examples/` directory for complete examples:
@@ -185,7 +171,6 @@ Check out the `examples/` directory for complete examples:
 - `stream-example/` - Streaming responses
 - `buffer-memory/` - In-memory conversation history
 - `redis-memory/` - Custom Redis memory implementation
-- `ollama-example/` - Using Ollama local LLM
 - `agent-tools/` - Agent with MCP tools
 
 Run any example:
@@ -214,7 +199,6 @@ go run ./examples/simple-run
 ### LLMs
 
 - `llms.NewOpenAIModel(config)` - Create OpenAI-compatible LLM
-- `llms.NewOllamaModel(config)` - Create Ollama LLM
 
 ### Memory
 
@@ -263,8 +247,7 @@ langchain-go/
 
 ## Requirements
 
-- Go 1.25.1 or later
-- For Ollama: [Install Ollama](https://ollama.ai) and pull a model
+- Go 1.24 or later
 
 ## License
 
@@ -277,5 +260,5 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Acknowledgments
 
 - Inspired by [LangChain](https://github.com/langchain-ai/langchain)
-- Built with [go-openai](https://github.com/sashabaranov/go-openai)
+- Built with [openai-go](https://github.com/openai/openai-go) (official SDK)
 - MCP integration via [mcp-go](https://github.com/mark3labs/mcp-go)

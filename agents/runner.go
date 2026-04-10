@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	openai "github.com/sashabaranov/go-openai"
+	"github.com/MrLeeang/langchain-go/llms"
 )
 
 // Run processes a user message and returns the agent's response.
@@ -43,26 +43,11 @@ func (a *Agent) RunWithContext(ctx context.Context, message string) (string, err
 		a.Duration = a.EndTime.Sub(a.StartTime)
 	}()
 
-	userMsg := openai.ChatCompletionMessage{
-		Role:    openai.ChatMessageRoleUser,
+	userMsg := llms.ChatCompletionMessage{
+		Role:    llms.ChatMessageRoleUser,
 		Content: message,
 	}
 	a.messages = append(a.messages, userMsg)
-
-	// Calculate prompt token usage for all messages
-	for _, msg := range a.messages {
-		if msg.Role == openai.ChatMessageRoleUser || msg.Role == openai.ChatMessageRoleSystem || msg.Role == openai.ChatMessageRoleTool {
-			a.CalculatePromptTokenUsage(msg.Content)
-		}
-	}
-
-	// Save user message to memory
-	if a.mem != nil && a.conversationID != "" {
-		if err := a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{userMsg}); err != nil {
-			// Log error but continue - memory save failures shouldn't block execution
-			// In production, you might want to log this
-		}
-	}
 
 	defer func() {
 		// 生成Assistant概要消息，然后作为Assistant消息保存起来
@@ -97,7 +82,7 @@ func (a *Agent) RunWithContext(ctx context.Context, message string) (string, err
 
 		if a.mem != nil && a.conversationID != "" {
 			// user message already saved to memory in handleStreamResponse
-			if err := a.mem.SaveMessages(ctx, a.conversationID, a.messages[a.historyMessageIndex+1:]); err != nil {
+			if err := a.mem.SaveMessages(ctx, a.conversationID, a.messages[a.historyMessageIndex:]); err != nil {
 				fmt.Println("Error saving messages to memory:", err)
 			}
 		}
@@ -113,7 +98,7 @@ func (a *Agent) RunWithContext(ctx context.Context, message string) (string, err
 			return "", err
 		}
 
-		resp, err := a.llm.Chat(ctx, a.messages)
+		resp, err := a.completeLLMTurn(ctx)
 		if err != nil {
 			return "", fmt.Errorf("failed to get LLM response: %w", err)
 		}
@@ -122,32 +107,28 @@ func (a *Agent) RunWithContext(ctx context.Context, message string) (string, err
 			return "", fmt.Errorf("no response from LLM")
 		}
 
-		output := resp.Choices[0].Message.Content
-		assistantMsg := openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleAssistant,
-			Content: output,
-		}
+		assistantMsg := resp.Choices[0].Message
 		a.messages = append(a.messages, assistantMsg)
 
-		a.CalculateCompletionTokenUsage(output)
+		a.CalculateCompletionTokenUsage(resp.Usage)
 
-		// Save assistant message to memory
-		// if a.mem != nil && a.conversationID != "" {
-		// 	if err := a.mem.SaveMessages(ctx, a.conversationID, []openai.ChatCompletionMessage{assistantMsg}); err != nil {
-		// 		// Log error but continue
-		// 		fmt.Println("error", err)
-		// 	}
-		// }
-
-		result, shouldContinue, err := a.parseLLMResponse(ctx, output)
-		if err != nil {
-			return "", err
+		if len(assistantMsg.ToolCalls) > 0 {
+			if err := a.executeNativeToolCalls(ctx, nil, assistantMsg.ToolCalls); err != nil {
+				return "", err
+			}
+			continue
 		}
 
-		if !shouldContinue {
-			return result, nil
-		}
+		return assistantMsg.Content, nil
 	}
 
 	return "", fmt.Errorf("max iterations (%d) exceeded", a.maxIter)
+}
+
+// completeLLMTurn uses OpenAI native tools when the LLM is [*llms.OpenAIModel] and MCP tools are configured.
+func (a *Agent) completeLLMTurn(ctx context.Context) (llms.ChatCompletionResponse, error) {
+	if om, ok := a.llm.(*llms.OpenAIModel); ok && len(a.tools) > 0 {
+		return om.ChatWithTools(ctx, a.messages, OpenAICompletionTools(a.tools))
+	}
+	return a.llm.Chat(ctx, a.messages)
 }

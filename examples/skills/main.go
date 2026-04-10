@@ -42,8 +42,7 @@ func main() {
 		tools = []mcp.Tool{}
 	}
 
-	// skills
-	skills, err := skills.LoadFiles([]string{"./examples-my/skill/search-host.md"})
+	skillList, err := skills.LoadFiles([]string{"./examples-my/skill/search-host.md"})
 	if err != nil {
 		panic(err)
 	}
@@ -61,7 +60,7 @@ func main() {
 	// Create agent with tools and memory
 	agent := agents.CreateReactAgent(ctx, llm,
 		agents.WithTools(tools),
-		agents.WithSkills(skills),
+		agents.WithSkills(skillList),
 		agents.WithMemory(mem),
 		agents.WithConversationID("skills-chat"),
 		agents.WithMaxIterations(20), // Limit tool-calling iterations

@@ -6,9 +6,10 @@ require (
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/mark3labs/mcp-go v0.43.0
 	github.com/milvus-io/milvus-sdk-go/v2 v2.4.2
+	github.com/openai/openai-go/v3 v3.31.0
 	github.com/pkoukk/tiktoken-go v0.1.8
 	github.com/redis/go-redis/v9 v9.16.0
-	github.com/sashabaranov/go-openai v1.41.2
+	github.com/tidwall/gjson v1.18.0
 )
 
 require (
@@ -34,15 +35,15 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
-	github.com/tidwall/gjson v1.14.4 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
-	github.com/tidwall/pretty v1.2.0 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
-	golang.org/x/net v0.17.0 // indirect
-	golang.org/x/sync v0.8.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/net v0.34.0 // indirect
+	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/genproto v0.0.0-20220503193339-ba3ae3f07e29 // indirect
 	google.golang.org/grpc v1.48.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect

@@ -10,14 +10,37 @@ import (
 
 // Skill represents a skill document that can be used for task orchestration.
 type Skill struct {
-	// Name is the name of the skill, typically derived from the filename
+	// Name from front matter (name: ...) or else the file base name without extension.
 	Name string
 
-	// Content is the raw markdown content of the skill document
-	Content string
-
-	// Description is extracted from the first paragraph or header
+	// Description from front matter (description: ...).
 	Description string
+
+	// Path is the absolute path to the markdown file after loading via LoadFiles, LoadDirectory, or Load.
+	Path string
+}
+
+func Load(skills []Skill) ([]Skill, error) {
+	var result []Skill
+
+	for _, skill := range skills {
+		if skill.Path == "" {
+			continue
+		}
+
+		abs, err := filepath.Abs(skill.Path)
+		if err != nil {
+			continue
+		}
+		if _, err := os.Stat(abs); err != nil {
+			continue
+		}
+
+		skill.Path = abs
+		result = append(result, skill)
+	}
+
+	return result, nil
 }
 
 // Load loads all markdown skill files from the specified directory.
@@ -29,7 +52,7 @@ type Skill struct {
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
-func Load(dir string) ([]Skill, error) {
+func LoadDirectory(dir string) ([]Skill, error) {
 	var skills []Skill
 
 	// Check if directory exists
@@ -57,14 +80,19 @@ func Load(dir string) ([]Skill, error) {
 			return nil
 		}
 
-		// Read the markdown file
-		content, err := os.ReadFile(path)
+		abs, err := filepath.Abs(path)
 		if err != nil {
-			return fmt.Errorf("failed to read file %s: %w", path, err)
+			return fmt.Errorf("failed to resolve path %s: %w", path, err)
+		}
+
+		// Read the markdown file
+		content, err := os.ReadFile(abs)
+		if err != nil {
+			return fmt.Errorf("failed to read file %s: %w", abs, err)
 		}
 
 		// Parse the skill
-		skill := parseSkill(path, string(content))
+		skill := parseSkill(abs, string(content))
 		skills = append(skills, skill)
 
 		return nil
@@ -97,36 +125,30 @@ func LoadFiles(files []string) ([]Skill, error) {
 			continue
 		}
 
-		info, err := os.Stat(path)
+		abs, err := filepath.Abs(path)
 		if err != nil {
-			return nil, fmt.Errorf("failed to access file %s: %w", path, err)
+			return nil, fmt.Errorf("failed to resolve path %s: %w", path, err)
+		}
+
+		info, err := os.Stat(abs)
+		if err != nil {
+			return nil, fmt.Errorf("failed to access file %s: %w", abs, err)
 		}
 		if info.IsDir() {
-			return nil, fmt.Errorf("%s is a directory, expected a single file", path)
+			return nil, fmt.Errorf("%s is a directory, expected a single file", abs)
 		}
 
 		// Only accept markdown files by convention
-		if !strings.HasSuffix(strings.ToLower(path), ".md") {
-			return nil, fmt.Errorf("%s is not a markdown (.md) file", path)
+		if !strings.HasSuffix(strings.ToLower(abs), ".md") {
+			return nil, fmt.Errorf("%s is not a markdown (.md) file", abs)
 		}
 
-		content, err := os.ReadFile(path)
+		content, err := os.ReadFile(abs)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read file %s: %w", path, err)
+			return nil, fmt.Errorf("failed to read file %s: %w", abs, err)
 		}
 
-		skill := parseSkill(path, string(content))
-		result = append(result, skill)
-	}
-
-	return result, nil
-}
-
-func LoadContents(contents []string) ([]Skill, error) {
-	var result []Skill
-
-	for _, content := range contents {
-		skill := parseSkill("", content)
+		skill := parseSkill(abs, string(content))
 		result = append(result, skill)
 	}
 
@@ -134,64 +156,54 @@ func LoadContents(contents []string) ([]Skill, error) {
 }
 
 // parseSkill parses a markdown file and extracts skill information.
+//
+// If the file begins with YAML-style front matter between --- lines (name: / description:),
+// those values are used. See skills/example.md.
 func parseSkill(filePath, content string) Skill {
-	// Extract name from filename (without extension)
-	name := ""
-	if filePath != "" {
-		name = strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
-	}
-
-	lines := strings.Split(content, "\n")
-
-	// if name is empty, use the first line of the content as the name
-	if name == "" {
-		name = strings.Replace(lines[0], "#", "", 1)
-		name = strings.TrimSpace(name)
-	}
-
+	name, desc := parseSkillFrontMatter(content)
 	skill := Skill{
-		Name:    name,
-		Content: content,
+		Path:        filePath,
+		Name:        name,
+		Description: desc,
 	}
+	if skill.Name == "" {
+		base := filepath.Base(filePath)
+		skill.Name = strings.TrimSuffix(base, filepath.Ext(base))
+	}
+	return skill
+}
 
-	// Extract description from first paragraph (before any ## sections)
-	var descriptionLines []string
-	var inCodeBlock bool
-
-	for index, line := range lines {
-
-		if index == 0 {
-			continue
-		}
-
-		// Track code blocks
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "```") {
-			inCodeBlock = !inCodeBlock
-			continue
-		}
-
-		if inCodeBlock {
-			continue
-		}
-
-		// Skip the first-level header (title)
-		if strings.HasPrefix(trimmed, "#") && !strings.HasPrefix(trimmed, "##") {
+func parseSkillFrontMatter(content string) (name, description string) {
+	s := strings.ReplaceAll(content, "\r\n", "\n")
+	s = strings.TrimPrefix(s, "\ufeff")
+	lines := strings.Split(s, "\n")
+	i := 0
+	for i < len(lines) && strings.TrimSpace(lines[i]) == "" {
+		i++
+	}
+	if i >= len(lines) || !isSkillFrontMatterDelimiter(lines[i]) {
+		return "", ""
+	}
+	i++
+	for i < len(lines) {
+		line := lines[i]
+		i++
+		if isSkillFrontMatterDelimiter(line) {
 			break
 		}
-
-		// Skip empty lines at the start
-		if len(descriptionLines) == 0 && trimmed == "" {
+		nl := strings.TrimSpace(line)
+		if nl == "" {
 			continue
 		}
-
-		// Collect description lines (non-empty lines)
-		if trimmed != "" {
-			descriptionLines = append(descriptionLines, trimmed)
+		if v, ok := strings.CutPrefix(nl, "name:"); ok {
+			name = strings.TrimSpace(v)
+		} else if v, ok := strings.CutPrefix(nl, "description:"); ok {
+			description = strings.TrimSpace(v)
 		}
 	}
+	return name, description
+}
 
-	skill.Description = strings.Join(descriptionLines, " | ")
-
-	return skill
+func isSkillFrontMatterDelimiter(line string) bool {
+	return strings.TrimSpace(line) == "---"
 }

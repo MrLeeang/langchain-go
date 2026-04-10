@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	openai "github.com/sashabaranov/go-openai"
+	"github.com/MrLeeang/langchain-go/llms"
 )
 
 // BufferMemory is a simple in-memory implementation of the Memory interface.
@@ -14,18 +14,18 @@ import (
 // This is the default memory implementation when no custom memory is provided.
 type BufferMemory struct {
 	mu            sync.RWMutex
-	conversations map[string][]openai.ChatCompletionMessage
+	conversations map[string][]llms.ChatCompletionMessage
 }
 
 // NewBufferMemory creates a new BufferMemory instance.
 func NewBufferMemory() *BufferMemory {
 	return &BufferMemory{
-		conversations: make(map[string][]openai.ChatCompletionMessage),
+		conversations: make(map[string][]llms.ChatCompletionMessage),
 	}
 }
 
 // LoadMessages loads conversation history for the given conversation ID.
-func (m *BufferMemory) LoadMessages(ctx context.Context, conversationID string) ([]openai.ChatCompletionMessage, error) {
+func (m *BufferMemory) LoadMessages(ctx context.Context, conversationID string) ([]llms.ChatCompletionMessage, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -33,13 +33,13 @@ func (m *BufferMemory) LoadMessages(ctx context.Context, conversationID string) 
 	messages := m.conversations[id]
 
 	// Return a copy to prevent external modifications
-	result := make([]openai.ChatCompletionMessage, len(messages))
+	result := make([]llms.ChatCompletionMessage, len(messages))
 	copy(result, messages)
 	return result, nil
 }
 
 // SaveMessages saves messages to the conversation history.
-func (m *BufferMemory) SaveMessages(ctx context.Context, conversationID string, messages []openai.ChatCompletionMessage) error {
+func (m *BufferMemory) SaveMessages(ctx context.Context, conversationID string, messages []llms.ChatCompletionMessage) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -79,7 +79,7 @@ func (m *BufferMemory) GetConversations() []string {
 	return ids
 }
 
-func (m *BufferMemory) GetRelevantMessages(conversationID string) []openai.ChatCompletionMessage {
+func (m *BufferMemory) GetRelevantMessages(conversationID string) []llms.ChatCompletionMessage {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 

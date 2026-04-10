@@ -3,7 +3,7 @@ package memory
 import (
 	"context"
 
-	openai "github.com/sashabaranov/go-openai"
+	"github.com/MrLeeang/langchain-go/llms"
 )
 
 // Memory is the interface that all memory implementations must satisfy.
@@ -23,7 +23,7 @@ type Memory interface {
 	// conversation threads. If empty, implementations should handle it
 	// according to their storage strategy (e.g., use a default ID or
 	// return empty history).
-	LoadMessages(ctx context.Context, conversationID string) ([]openai.ChatCompletionMessage, error)
+	LoadMessages(ctx context.Context, conversationID string) ([]llms.ChatCompletionMessage, error)
 
 	// SaveMessages saves a message to the conversation history.
 	// This is called for each user message and assistant response.
@@ -31,7 +31,7 @@ type Memory interface {
 	// Parameters:
 	//   - conversationID: The ID of the conversation thread
 	//   - messages: The new messages to save (typically 1-2 messages per call)
-	SaveMessages(ctx context.Context, conversationID string, messages []openai.ChatCompletionMessage) error
+	SaveMessages(ctx context.Context, conversationID string, messages []llms.ChatCompletionMessage) error
 
 	// ClearMessages clears all messages for the given conversation ID.
 	// This is useful for starting fresh conversations or cleaning up old data.
@@ -46,7 +46,7 @@ type ConversationMemory interface {
 	// GetRelevantMessages retrieves relevant messages from history based on a query.
 	// This is useful for RAG-like retrieval where you want to find contextually
 	// relevant past conversations to include in the current context.
-	GetRelevantMessages(ctx context.Context, conversationID string, query string, limit int) ([]openai.ChatCompletionMessage, error)
+	GetRelevantMessages(ctx context.Context, conversationID string, query string, limit int) ([]llms.ChatCompletionMessage, error)
 
 	// SummarizeMessages creates a summary of the conversation history.
 	// This can be used to compress long conversations into a shorter summary

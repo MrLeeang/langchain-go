@@ -7,7 +7,8 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	openai "github.com/sashabaranov/go-openai"
+
+	"github.com/MrLeeang/langchain-go/llms"
 )
 
 // RedisMemory is a memory implementation that uses Redis to store and retrieve conversation history.
@@ -133,7 +134,7 @@ func (m *RedisMemory) getKey(conversationID string) string {
 
 // LoadMessages loads conversation history for the given conversation ID.
 // Uses Redis List (LRANGE) for efficient loading.
-func (m *RedisMemory) LoadMessages(ctx context.Context, conversationID string) ([]openai.ChatCompletionMessage, error) {
+func (m *RedisMemory) LoadMessages(ctx context.Context, conversationID string) ([]llms.ChatCompletionMessage, error) {
 	key := m.getKey(conversationID)
 
 	// Get all messages from the list (0 to -1 means all elements)
@@ -143,13 +144,13 @@ func (m *RedisMemory) LoadMessages(ctx context.Context, conversationID string) (
 	}
 
 	if len(data) == 0 {
-		return []openai.ChatCompletionMessage{}, nil
+		return []llms.ChatCompletionMessage{}, nil
 	}
 
 	// Unmarshal each message from the list
-	messages := make([]openai.ChatCompletionMessage, 0, len(data))
+	messages := make([]llms.ChatCompletionMessage, 0, len(data))
 	for _, item := range data {
-		var msg openai.ChatCompletionMessage
+		var msg llms.ChatCompletionMessage
 		if err := json.Unmarshal([]byte(item), &msg); err != nil {
 			// Skip invalid messages but continue processing
 			continue
@@ -164,7 +165,7 @@ func (m *RedisMemory) LoadMessages(ctx context.Context, conversationID string) (
 // Uses Redis List (RPUSH) for efficient incremental appending.
 // Each message is stored as a separate list element, avoiding the need to
 // load and rewrite the entire conversation history.
-func (m *RedisMemory) SaveMessages(ctx context.Context, conversationID string, messages []openai.ChatCompletionMessage) error {
+func (m *RedisMemory) SaveMessages(ctx context.Context, conversationID string, messages []llms.ChatCompletionMessage) error {
 	if len(messages) == 0 {
 		return nil
 	}
@@ -237,7 +238,7 @@ func (m *RedisMemory) GetClient() *redis.Client {
 //
 //	// Load only the last 10 messages
 //	messages, _ := mem.LoadMessagesWithLimit(ctx, "conv-123", 10)
-func (m *RedisMemory) LoadMessagesWithLimit(ctx context.Context, conversationID string, limit int) ([]openai.ChatCompletionMessage, error) {
+func (m *RedisMemory) LoadMessagesWithLimit(ctx context.Context, conversationID string, limit int) ([]llms.ChatCompletionMessage, error) {
 	key := m.getKey(conversationID)
 
 	var data []string
@@ -268,13 +269,13 @@ func (m *RedisMemory) LoadMessagesWithLimit(ctx context.Context, conversationID 
 	}
 
 	if len(data) == 0 {
-		return []openai.ChatCompletionMessage{}, nil
+		return []llms.ChatCompletionMessage{}, nil
 	}
 
 	// Unmarshal each message from the list
-	messages := make([]openai.ChatCompletionMessage, 0, len(data))
+	messages := make([]llms.ChatCompletionMessage, 0, len(data))
 	for _, item := range data {
-		var msg openai.ChatCompletionMessage
+		var msg llms.ChatCompletionMessage
 		if err := json.Unmarshal([]byte(item), &msg); err != nil {
 			// Skip invalid messages but continue processing
 			continue

@@ -8,8 +8,6 @@ import (
 	"github.com/MrLeeang/langchain-go/mcp"
 	"github.com/MrLeeang/langchain-go/memory"
 	"github.com/MrLeeang/langchain-go/skills"
-
-	openai "github.com/sashabaranov/go-openai"
 )
 
 // Agent represents a ReAct-style agent that can use tools to answer questions.
@@ -19,8 +17,7 @@ type Agent struct {
 	cancel              context.CancelFunc
 	llm                 llms.LLM
 	tools               []mcp.Tool
-	skillsList          []skills.Skill
-	messages            []openai.ChatCompletionMessage
+	messages            []llms.ChatCompletionMessage
 	historyMessageIndex int
 	maxHistoryTokens    int
 	Prompt              string
@@ -35,6 +32,8 @@ type Agent struct {
 	EndTime             time.Time
 	maxBufferSize       int
 	debug               bool
+	// registeredSkills lists skill metadata (name, description, path) injected into the system prompt so the model can read the full .md via tools such as read_file.
+	registeredSkills []skills.Skill
 }
 
 // CreateReactAgent creates a new ReAct-style agent with the given LLM.
@@ -57,7 +56,7 @@ func CreateReactAgent(ctx context.Context, llm llms.LLM, opts ...AgentOption) *A
 		ctx:              ctx,
 		llm:              llm,
 		tools:            []mcp.Tool{}, // Default to empty tools
-		messages:         []openai.ChatCompletionMessage{},
+		messages:         []llms.ChatCompletionMessage{},
 		maxIter:          10,
 		mem:              memory.NewBufferMemory(), // Default memory implementation
 		maxBufferSize:    200,
@@ -69,23 +68,14 @@ func CreateReactAgent(ctx context.Context, llm llms.LLM, opts ...AgentOption) *A
 		opt(agent)
 	}
 
-	// build system prompt
-	if len(agent.tools) > 0 || len(agent.skillsList) > 0 {
-		systemPrompt := buildSystemPrompt(agent.tools, agent.skillsList)
-		agent.messages = append(agent.messages, openai.ChatCompletionMessage{
-			Role:    openai.ChatMessageRoleSystem,
-			Content: systemPrompt,
-		})
-	}
-
 	return agent
 }
 
-func (a *Agent) SetMessages(messages []openai.ChatCompletionMessage) {
+func (a *Agent) SetMessages(messages []llms.ChatCompletionMessage) {
 	a.messages = append(a.messages, messages...)
 }
 
-func (a *Agent) GetMessages() []openai.ChatCompletionMessage {
+func (a *Agent) GetMessages() []llms.ChatCompletionMessage {
 	return a.messages
 }
 

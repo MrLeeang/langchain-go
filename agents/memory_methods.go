@@ -3,8 +3,8 @@ package agents
 import (
 	"fmt"
 
+	"github.com/MrLeeang/langchain-go/llms"
 	"github.com/MrLeeang/langchain-go/memory"
-	openai "github.com/sashabaranov/go-openai"
 )
 
 // GetMemory returns the memory implementation used by this agent.
@@ -25,18 +25,20 @@ func (a *Agent) LoadMessages(latestUserInput string) {
 	if a.mem != nil && a.conversationID != "" {
 
 		// build system prompt
-		if len(a.tools) > 0 || len(a.skillsList) > 0 {
-			systemPrompt := buildSystemPrompt(a.tools, a.skillsList)
-			a.messages = []openai.ChatCompletionMessage{
-				{
-					Role:    openai.ChatMessageRoleSystem,
-					Content: systemPrompt,
-				},
-			}
+		systemPrompt := buildSystemPrompt(a.registeredSkills)
+		a.messages = []llms.ChatCompletionMessage{
+			{
+				Role:    llms.ChatMessageRoleSystem,
+				Content: systemPrompt,
+			},
+		}
 
-			if a.Prompt != "" {
-				a.messages[0].Content += "\n\n# User Instructions\n" + a.Prompt
-			}
+		if a.Prompt != "" {
+			a.messages[0].Content += "\n\n# User Instructions\n" + a.Prompt
+		}
+
+		if a.debug {
+			fmt.Printf("System prompt set to:\n%s\n", a.messages[0].Content)
 		}
 
 		// Check if this is MilvusMemory with query-based loading enabled
@@ -82,7 +84,7 @@ func (a *Agent) LoadMessages(latestUserInput string) {
 
 					// 从 historyIndex 开始向后找第一个 User 消息
 					originalIndex := historyIndex
-					for historyIndex < len(history) && history[historyIndex].Role != openai.ChatMessageRoleUser {
+					for historyIndex < len(history) && history[historyIndex].Role != llms.ChatMessageRoleUser {
 						historyIndex++
 					}
 
@@ -106,17 +108,17 @@ func (a *Agent) LoadMessages(latestUserInput string) {
 						fmt.Println("Error generating summary:", err)
 					} else {
 						// 将生成的概要作为Assistant消息保存到对话中
-						summaryMsg := openai.ChatCompletionMessage{
-							Role:    openai.ChatMessageRoleAssistant,
+						summaryMsg := llms.ChatCompletionMessage{
+							Role:    llms.ChatMessageRoleAssistant,
 							Content: fmt.Sprintf("[System Note: Automatic summary of previous conversation]\n\n%s", summary),
 						}
 						a.messages = append(a.messages, summaryMsg)
 					}
 
 					// 确保摘要后跟的是 User 消息
-					if history[historyIndex].Role != openai.ChatMessageRoleUser {
-						a.messages = append(a.messages, openai.ChatCompletionMessage{
-							Role:    openai.ChatMessageRoleUser,
+					if history[historyIndex].Role != llms.ChatMessageRoleUser {
+						a.messages = append(a.messages, llms.ChatCompletionMessage{
+							Role:    llms.ChatMessageRoleUser,
 							Content: "Continue from the previous conversation.",
 						})
 					}

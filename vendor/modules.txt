@@ -119,6 +119,31 @@ github.com/milvus-io/milvus-sdk-go/v2/common
 github.com/milvus-io/milvus-sdk-go/v2/entity
 github.com/milvus-io/milvus-sdk-go/v2/internal/utils/crypto
 github.com/milvus-io/milvus-sdk-go/v2/merr
+# github.com/openai/openai-go/v3 v3.31.0
+## explicit; go 1.22
+github.com/openai/openai-go/v3
+github.com/openai/openai-go/v3/auth
+github.com/openai/openai-go/v3/conversations
+github.com/openai/openai-go/v3/internal
+github.com/openai/openai-go/v3/internal/apierror
+github.com/openai/openai-go/v3/internal/apiform
+github.com/openai/openai-go/v3/internal/apijson
+github.com/openai/openai-go/v3/internal/apiquery
+github.com/openai/openai-go/v3/internal/encoding/json
+github.com/openai/openai-go/v3/internal/encoding/json/sentinel
+github.com/openai/openai-go/v3/internal/encoding/json/shims
+github.com/openai/openai-go/v3/internal/paramutil
+github.com/openai/openai-go/v3/internal/requestconfig
+github.com/openai/openai-go/v3/option
+github.com/openai/openai-go/v3/packages/pagination
+github.com/openai/openai-go/v3/packages/param
+github.com/openai/openai-go/v3/packages/respjson
+github.com/openai/openai-go/v3/packages/ssestream
+github.com/openai/openai-go/v3/realtime
+github.com/openai/openai-go/v3/responses
+github.com/openai/openai-go/v3/shared
+github.com/openai/openai-go/v3/shared/constant
+github.com/openai/openai-go/v3/webhooks
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
@@ -144,46 +169,44 @@ github.com/redis/go-redis/v9/push
 # github.com/rogpeppe/go-internal v1.9.0
 ## explicit; go 1.17
 github.com/rogpeppe/go-internal/fmtsort
-# github.com/sashabaranov/go-openai v1.41.2
-## explicit; go 1.18
-github.com/sashabaranov/go-openai
-github.com/sashabaranov/go-openai/internal
-github.com/sashabaranov/go-openai/jsonschema
 # github.com/spf13/cast v1.7.1
 ## explicit; go 1.19
 github.com/spf13/cast
-# github.com/tidwall/gjson v1.14.4
+# github.com/tidwall/gjson v1.18.0
 ## explicit; go 1.12
 github.com/tidwall/gjson
 # github.com/tidwall/match v1.1.1
 ## explicit; go 1.15
 github.com/tidwall/match
-# github.com/tidwall/pretty v1.2.0
+# github.com/tidwall/pretty v1.2.1
 ## explicit; go 1.16
 github.com/tidwall/pretty
+# github.com/tidwall/sjson v1.2.5
+## explicit; go 1.14
+github.com/tidwall/sjson
 # github.com/wk8/go-ordered-map/v2 v2.1.8
 ## explicit; go 1.18
 github.com/wk8/go-ordered-map/v2
 # github.com/yosida95/uritemplate/v3 v3.0.2
 ## explicit; go 1.14
 github.com/yosida95/uritemplate/v3
-# golang.org/x/net v0.17.0
-## explicit; go 1.17
+# golang.org/x/net v0.34.0
+## explicit; go 1.18
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/internal/timeseries
 golang.org/x/net/trace
-# golang.org/x/sync v0.8.0
+# golang.org/x/sync v0.10.0
 ## explicit; go 1.18
 golang.org/x/sync/singleflight
-# golang.org/x/sys v0.13.0
-## explicit; go 1.17
+# golang.org/x/sys v0.29.0
+## explicit; go 1.18
 golang.org/x/sys/execabs
 golang.org/x/sys/unix
-# golang.org/x/text v0.13.0
-## explicit; go 1.17
+# golang.org/x/text v0.21.0
+## explicit; go 1.18
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi

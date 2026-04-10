@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/MrLeeang/langchain-go/llms"
-	openai "github.com/sashabaranov/go-openai"
 )
 
 // SummarizerConfig holds configuration for the summarizer
@@ -46,30 +45,30 @@ func NewSummarizer(config SummarizerConfig) *Summarizer {
 }
 
 // GenerateSummaryWithContext generates a summary with additional context
-func (s *Summarizer) GenerateSummaryWithContext(ctx context.Context, msgs []openai.ChatCompletionMessage) (string, error) {
+func (s *Summarizer) GenerateSummaryWithContext(ctx context.Context, msgs []llms.ChatCompletionMessage) (string, error) {
 	if s == nil || s.llm == nil {
 		return "", fmt.Errorf("summarizer or LLM not initialized")
 	}
 
 	systemPrompt := s.buildSummaryPrompt()
 
-	messages := []openai.ChatCompletionMessage{
+	messages := []llms.ChatCompletionMessage{
 		{
-			Role:    openai.ChatMessageRoleSystem,
+			Role:    llms.ChatMessageRoleSystem,
 			Content: systemPrompt,
 		},
 	}
 
 	for _, msg := range msgs {
-		if msg.Role == openai.ChatMessageRoleSystem {
+		if msg.Role == llms.ChatMessageRoleSystem {
 			continue
 		}
 
 		messages = append(messages, msg)
 	}
 
-	messages = append(messages, openai.ChatCompletionMessage{
-		Role:    openai.ChatMessageRoleUser,
+	messages = append(messages, llms.ChatCompletionMessage{
+		Role:    llms.ChatMessageRoleUser,
 		Content: "Please provide a summary of the above conversation.",
 	})
 

@@ -40,6 +40,16 @@ func (t *MCPTool) Description() string {
 	return fmt.Sprintf("name: %s\nDescription: %s\nArguments: %s", t.remoteName, t.remoteDesc, string(argsJSON))
 }
 
+// ModelDescription is the short text shown to the model in OpenAI function metadata.
+func (t *MCPTool) ModelDescription() string {
+	return t.remoteDesc
+}
+
+// ArgumentsSchema returns the MCP tool input schema (JSON Schema object or similar).
+func (t *MCPTool) ArgumentsSchema() any {
+	return t.argsSchema
+}
+
 // Call executes the tool with the given input.
 // It creates a new MCP client connection, initializes it, and calls the tool.
 // The input should be a map[string]interface{} or JSON-serializable structure.
