@@ -43,8 +43,14 @@ func Load(skills []Skill) ([]Skill, error) {
 	return result, nil
 }
 
-// Load loads all markdown skill files from the specified directory.
-// It returns a slice of Skill objects, one for each .md file found.
+// Load loads skill markdown files from the specified directory.
+// Preferred structure is one skill per subdirectory:
+//
+//	skills/
+//	├── skill-management/
+//	│   ├── SKILL.md
+//
+// LoadDirectory scans recursively and only loads files named SKILL.md (case-insensitive).
 //
 // Example:
 //
@@ -64,23 +70,25 @@ func LoadDirectory(dir string) ([]Skill, error) {
 		return nil, fmt.Errorf("%s is not a directory", dir)
 	}
 
-	// Walk through the directory and find all .md files
+	// Walk through the directory and find all SKILL.md files
 	err = filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
 		// Skip directories
-		if d.IsDir() {
+		if !d.IsDir() {
 			return nil
 		}
 
-		// Only process .md files
-		if !strings.HasSuffix(strings.ToLower(path), ".md") {
+		filePath := filepath.Join(path, "SKILL.md")
+
+		// if not exists, skip
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
 			return nil
 		}
 
-		abs, err := filepath.Abs(path)
+		abs, err := filepath.Abs(filePath)
 		if err != nil {
 			return fmt.Errorf("failed to resolve path %s: %w", path, err)
 		}
