@@ -19,7 +19,7 @@ type Agent struct {
 	tools               []mcp.Tool
 	messages            []llms.ChatCompletionMessage
 	historyMessageIndex int
-	maxHistoryTokens    int
+	maxWindowTokens     int
 	Prompt              string
 	maxIter             int
 	mem                 memory.Memory
@@ -52,13 +52,13 @@ type Agent struct {
 //	)
 func CreateReactAgent(ctx context.Context, llm llms.LLM, opts ...AgentOption) *Agent {
 	agent := &Agent{
-		ctx:              ctx,
-		llm:              llm,
-		tools:            []mcp.Tool{}, // Default to empty tools
-		messages:         []llms.ChatCompletionMessage{},
-		maxIter:          10,
-		mem:              memory.NewBufferMemory(), // Default memory implementation
-		maxHistoryTokens: 32000,
+		ctx:             ctx,
+		llm:             llm,
+		tools:           []mcp.Tool{}, // Default to empty tools
+		messages:        []llms.ChatCompletionMessage{},
+		maxIter:         10,
+		mem:             memory.NewBufferMemory(), // Default memory implementation
+		maxWindowTokens: 32000,
 	}
 
 	// Apply options

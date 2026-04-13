@@ -37,19 +37,3 @@ type Memory interface {
 	// This is useful for starting fresh conversations or cleaning up old data.
 	ClearMessages(ctx context.Context, conversationID string) error
 }
-
-// ConversationMemory is an optional interface for memory implementations
-// that support advanced features like message retrieval and summarization.
-type ConversationMemory interface {
-	Memory
-
-	// GetRelevantMessages retrieves relevant messages from history based on a query.
-	// This is useful for RAG-like retrieval where you want to find contextually
-	// relevant past conversations to include in the current context.
-	GetRelevantMessages(ctx context.Context, conversationID string, query string, limit int) ([]llms.ChatCompletionMessage, error)
-
-	// SummarizeMessages creates a summary of the conversation history.
-	// This can be used to compress long conversations into a shorter summary
-	// to save tokens while preserving context.
-	SummarizeMessages(ctx context.Context, conversationID string) (string, error)
-}

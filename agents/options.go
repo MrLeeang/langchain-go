@@ -67,10 +67,10 @@ func WithDebug(debug bool) AgentOption {
 	}
 }
 
-// WithMaxHistoryTokens sets the maximum number of tokens in the history.
+// WithMaxWindowTokens sets the maximum number of tokens in the window.
 // Default is 32000.
-func WithMaxHistoryTokens(maxHistoryTokens int) AgentOption {
+func WithMaxWindowTokens(maxWindowTokens int) AgentOption {
 	return func(a *Agent) {
-		a.maxHistoryTokens = maxHistoryTokens
+		a.maxWindowTokens = maxWindowTokens
 	}
 }
