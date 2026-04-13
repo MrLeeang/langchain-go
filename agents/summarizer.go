@@ -94,36 +94,62 @@ func (s *Summarizer) buildSummaryPrompt() string {
 
 // buildEnglishSummaryPrompt returns the English summary prompt
 func (s *Summarizer) buildEnglishSummaryPrompt() string {
-	return fmt.Sprintf(`You are an expert summarizer. Your task is to create clear, concise, and informative summaries.
+	return fmt.Sprintf(`You are a professional conversation memory manager. From the following conversation history, extract key information worth remembering long-term, and organize the output into four categories. Ignore trivial chatter, temporary content, or outdated information.
 
-Instructions:
-1. Extract the key information and main points from the provided content
-2. Organize the summary in a logical structure
-3. Use clear and simple language
-4. Keep the summary within approximately %d tokens
-5. Focus on the most important information
-6. Maintain objectivity and accuracy
-7. Include relevant details that provide context
-8. If there are commands, code, sql statements, etc., please keep the original text format and do not modify it.
+## Extraction Rules
+1. **Important decisions and reasons**: Explicit choices, commitments, directional decisions made by the user, along with the rationale or context behind those decisions.
+2. **Lessons learned**: Reusable insights from successes or failures, pitfalls to avoid, methods proven effective.
+3. **Preferences and habits**: Repeatedly expressed likes, dislikes, work/life habits, communication style, or tool preferences.
+4. **Project progress and status**: Key milestones, completed items, unresolved blockers, next-stage goals.
 
-Provide only the summary without any preamble or explanation.`, s.maxTokens)
+## Special Formatting Requirement
+- If the conversation contains **commands, code, SQL statements**, or any other executable or structured text, you **must preserve the original text format** exactly, including:
+  - All indentation (spaces or tabs)
+  - Line breaks
+  - Letter case
+  - Punctuation
+  - Comments
+- Do not modify, translate, reflow, grammar-check, or reformat these contents in any way.
+- If you need to provide context or explanation in the output, place the original content inside a Markdown code block . The characters inside the code block must be identical to the original.
+
+## Output Length Limit
+- Keep the entire summary within **%d tokens**.
+- Prioritize the most core, long‑term valuable information across the four categories. If the limit is exceeded, add a note at the end: "(some details omitted due to length limit)".
+
+## Output Format
+If a category has no new content to extract, omit that category. Describe each piece of information under each category with concise phrases or short sentences, avoiding redundancy.
+
+Please output the long-term memory summary。`, s.maxTokens)
 }
 
 // buildChineseSummaryPrompt returns the Chinese summary prompt
 func (s *Summarizer) buildChineseSummaryPrompt() string {
-	return fmt.Sprintf(`你是一位专业的总结专家。你的任务是创建清晰、简洁和信息丰富的摘要。
+	return fmt.Sprintf(`你是一个专业的会话记忆管理器。请从以下对话历史中，提取值得长期记住的关键信息，并按照四个类别组织输出。忽略琐碎的闲聊、临时性内容或已经过时的信息。
 
-要求：
-1. 从提供的内容中提取关键信息和要点
-2. 以逻辑清晰的结构组织摘要
-3. 使用简明扼要的语言
-4. 保持摘要在约 %d 个 token 以内
-5. 重点关注最重要的信息
-6. 保持客观性和准确性
-7. 包含提供上下文的相关细节
-8. 如果有命令、代码、sql语句等，请保持原文本格式，不要进行任何修改。
+## 提取规则
+1. **重要决定和原因**：用户明确做出的选择、承诺、方向性决策，以及做出该决定的理由或背景。
+2. **学到的经验教训**：从成功或失败中总结出的可复用的认知、需要避免的坑、验证过有效的方法。
+3. **偏好和习惯**：用户反复表露的喜好、厌恶、工作/生活习惯、沟通风格或工具使用倾向。
+4. **项目进展和状态**：项目当前的关键里程碑、已完成事项、待解决阻塞点、下一阶段目标。
 
-仅提供摘要，不需要前言或解释。`, s.maxTokens)
+## 特殊格式要求
+- 如果对话中出现**命令、代码、SQL 语句**等任何可执行或结构化文本，在提取时**必须保持原始文本格式**，包括：
+  - 所有缩进（空格或制表符）
+  - 换行位置
+  - 大小写
+  - 标点符号
+  - 注释内容
+- 不得对这些内容进行任何修改、翻译、重排、语法润色或格式转换。
+- 如需在输出中提供上下文说明，请将原始内容放入 Markdown 代码块中，代码块内的字符必须与原文一字不差。
+
+## 输出长度限制
+- 请控制整个摘要的输出不超过 **%d tokens**。
+- 优先保留四类中最核心、最具长期价值的信息。若超出限制，可在末尾注明“（因长度限制省略了部分细节）”。
+
+## 输出格式
+如果某类没有新内容可提取，则省略该类。每类下的每条信息用简洁的短语或短句描述，避免冗余。
+
+请输出长期记忆摘要。`, s.maxTokens)
 }
 
 // SetMaxTokens updates the max tokens for summary generation
