@@ -24,8 +24,9 @@ type ChatToolCall struct {
 
 // ChatCompletionMessage is one turn in a chat request or history.
 type ChatCompletionMessage struct {
-	Role    string
-	Content string
+	Role             string
+	Content          string
+	ReasoningContent string
 	// ToolCalls is set on assistant messages when the model requests tool execution.
 	ToolCalls []ChatToolCall
 	// ToolCallID is set on role "tool" messages (required by the API when replying to ToolCalls).
@@ -57,10 +58,10 @@ type ChatCompletionStreamDelta struct {
 
 // ChatCompletionStreamToolCallDelta is one entry in delta.tool_calls from the wire format.
 type ChatCompletionStreamToolCallDelta struct {
-	Index              int
-	ID                 string
-	Type               string
-	NameFragment       string
+	Index             int
+	ID                string
+	Type              string
+	NameFragment      string
 	ArgumentsFragment string
 }
 

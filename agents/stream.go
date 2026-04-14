@@ -121,7 +121,7 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 
 			toolCallsBuffer := make(map[int]*streamToolCallBuffer)
 			var fullContent strings.Builder
-
+			var reasoningContent strings.Builder
 			for {
 				response, err := stream.Recv()
 				if errors.Is(err, io.EOF) {
@@ -131,6 +131,12 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 				if err == context.Canceled {
 					stream.Close()
 					ch <- StreamResponse{Done: true}
+					assistantMsg := llms.ChatCompletionMessage{
+						Role:             llms.ChatMessageRoleAssistant,
+						Content:          fullContent.String(),
+						ReasoningContent: reasoningContent.String(),
+					}
+					a.messages = append(a.messages, assistantMsg)
 					return
 				}
 
@@ -151,6 +157,7 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 				}
 
 				if delta.ReasoningContent != "" {
+					reasoningContent.WriteString(delta.ReasoningContent)
 					ch <- StreamResponse{ReasoningContent: delta.ReasoningContent}
 				}
 
@@ -197,9 +204,10 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 			stream.Close()
 
 			assistantMsg := llms.ChatCompletionMessage{
-				Role:      llms.ChatMessageRoleAssistant,
-				Content:   fullContent.String(),
-				ToolCalls: toolCallsSortedFromBuffer(toolCallsBuffer),
+				Role:             llms.ChatMessageRoleAssistant,
+				Content:          fullContent.String(),
+				ReasoningContent: reasoningContent.String(),
+				ToolCalls:        toolCallsSortedFromBuffer(toolCallsBuffer),
 			}
 
 			if strings.EqualFold(finishReason, "tool_calls") && len(assistantMsg.ToolCalls) == 0 {

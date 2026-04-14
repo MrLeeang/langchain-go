@@ -68,7 +68,7 @@ func (m *OpenAIModel) ChatWithTools(ctx context.Context, messages []ChatCompleti
 	if len(tools) > 0 {
 		params.Tools = tools
 	}
-	m.applyThinkingParams(&params)
+	m.applyThinkingParams(&params, false)
 
 	resp, err := m.client.Chat.Completions.New(ctx, params)
 	if err != nil {
@@ -91,7 +91,7 @@ func (m *OpenAIModel) ChatStreamWithTools(ctx context.Context, messages []ChatCo
 	if len(tools) > 0 {
 		params.Tools = tools
 	}
-	m.applyThinkingParams(&params)
+	m.applyThinkingParams(&params, m.thinking)
 
 	stream := m.client.Chat.Completions.NewStreaming(ctx, params)
 	if stream.Err() != nil {
@@ -100,8 +100,8 @@ func (m *OpenAIModel) ChatStreamWithTools(ctx context.Context, messages []ChatCo
 	return newChatCompletionStream(stream), nil
 }
 
-func (m *OpenAIModel) applyThinkingParams(params *openai.ChatCompletionNewParams) {
-	if m.thinking {
+func (m *OpenAIModel) applyThinkingParams(params *openai.ChatCompletionNewParams, enableThinking bool) {
+	if enableThinking {
 		return
 	}
 	ex := map[string]any{"enable_thinking": false}
