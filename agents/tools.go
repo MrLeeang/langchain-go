@@ -39,17 +39,11 @@ func OpenAICompletionTools(tools []mcp.Tool) []openai.ChatCompletionToolUnionPar
 }
 
 func toolModelDescription(t mcp.Tool) string {
-	if mt, ok := t.(*mcp.MCPTool); ok {
-		return mt.ModelDescription()
-	}
 	return t.Description()
 }
 
 func functionParametersForTool(t mcp.Tool) shared.FunctionParameters {
-	if mt, ok := t.(*mcp.MCPTool); ok {
-		return normalizeFunctionParameters(mt.ArgumentsSchema())
-	}
-	return defaultObjectParameters()
+	return normalizeFunctionParameters(t.ArgumentsSchema())
 }
 
 func defaultObjectParameters() shared.FunctionParameters {

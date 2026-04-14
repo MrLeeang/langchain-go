@@ -12,6 +12,8 @@ type Tool interface {
 	// This is used to help the LLM understand when and how to use the tool.
 	Description() string
 
+	ArgumentsSchema() any
+
 	// Call executes the tool with the given input and returns the result.
 	// The input can be any type, typically a map[string]interface{} or a JSON-serializable structure.
 	// Returns the result as a string and any error that occurred during execution.

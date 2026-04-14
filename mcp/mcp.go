@@ -82,9 +82,16 @@ func InitializeMCP(ctx context.Context, configs []*Config) ([]Tool, error) {
 				continue
 			}
 
+			toolName := rt.Name
+
+			if cfg.Name != "default" {
+				// mcp_server_name + "/" + tool_name
+				toolName = cfg.Name + "/" + toolName
+			}
+
 			tools = append(tools, NewMCPTool(
 				spec,
-				rt.Name,
+				toolName,
 				rt.Description,
 				rt.InputSchema,
 			))

@@ -2,7 +2,6 @@ package mcp
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	mcpclient "github.com/mark3labs/mcp-go/client"
@@ -36,12 +35,6 @@ func (t *MCPTool) Name() string {
 // Description returns a formatted description of the tool including its name,
 // description, and argument schema.
 func (t *MCPTool) Description() string {
-	argsJSON, _ := json.Marshal(t.argsSchema)
-	return fmt.Sprintf("name: %s\nDescription: %s\nArguments: %s", t.remoteName, t.remoteDesc, string(argsJSON))
-}
-
-// ModelDescription is the short text shown to the model in OpenAI function metadata.
-func (t *MCPTool) ModelDescription() string {
 	return t.remoteDesc
 }
 
