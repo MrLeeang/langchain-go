@@ -195,18 +195,40 @@ func parseSkillFrontMatter(content string) (name, description string) {
 	i++
 	for i < len(lines) {
 		line := lines[i]
-		i++
 		if isSkillFrontMatterDelimiter(line) {
 			break
 		}
-		nl := strings.TrimSpace(line)
-		if nl == "" {
+
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			i++
 			continue
 		}
-		if v, ok := strings.CutPrefix(nl, "name:"); ok {
-			name = strings.TrimSpace(v)
-		} else if v, ok := strings.CutPrefix(nl, "description:"); ok {
-			description = strings.TrimSpace(v)
+
+		if !isTopLevelFrontMatterLine(line) {
+			i++
+			continue
+		}
+
+		key, value, ok := strings.Cut(trimmed, ":")
+		if !ok {
+			i++
+			continue
+		}
+
+		key = strings.TrimSpace(key)
+		value = strings.TrimSpace(value)
+
+		switch key {
+		case "name":
+			name = value
+			i++
+		case "description":
+			desc, next := parseFrontMatterDescription(lines, i, value)
+			description = desc
+			i = next
+		default:
+			i++
 		}
 	}
 	return name, description
@@ -214,4 +236,49 @@ func parseSkillFrontMatter(content string) (name, description string) {
 
 func isSkillFrontMatterDelimiter(line string) bool {
 	return strings.TrimSpace(line) == "---"
+}
+
+func isTopLevelFrontMatterLine(line string) bool {
+	return line == strings.TrimLeft(line, " \t")
+}
+
+func parseFrontMatterDescription(lines []string, idx int, inlineValue string) (string, int) {
+	// Single-line: description: xxx
+	if inlineValue != "" && !isYAMLBlockIndicator(inlineValue) {
+		return inlineValue, idx + 1
+	}
+
+	// Multi-line:
+	// description:
+	//   line1
+	//   line2
+	//
+	// or
+	// description: |
+	//   line1
+	//   line2
+	next := idx + 1
+	var parts []string
+	for next < len(lines) {
+		line := lines[next]
+		if isSkillFrontMatterDelimiter(line) {
+			break
+		}
+		if isTopLevelFrontMatterLine(line) {
+			break
+		}
+		parts = append(parts, strings.TrimSpace(line))
+		next++
+	}
+
+	return strings.TrimSpace(strings.Join(parts, "\n")), next
+}
+
+func isYAMLBlockIndicator(value string) bool {
+	switch value {
+	case "|", "|-", "|+", ">", ">-", ">+":
+		return true
+	default:
+		return false
+	}
 }
