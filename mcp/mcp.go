@@ -85,7 +85,6 @@ func InitializeMCP(ctx context.Context, configs []*Config) ([]Tool, error) {
 			toolName := rt.Name
 
 			if cfg.Name != "default" {
-				// mcp_server_name + "_" + tool_name
 				toolName = cfg.Name + "_" + toolName
 			}
 
