@@ -63,11 +63,35 @@ func main() {
 	fmt.Println("============================")
 
 	// Ask a question that might require tool usage
-	response, err := agent.Run("What tools are available to me?")
+	ch := agent.Stream("What tools are available to me?")
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
 	}
 
-	fmt.Printf("Response: %s\n", response)
+	for resp := range ch {
+		if resp.Error != nil {
+			fmt.Printf("\nError: %v\n", resp.Error)
+			break
+		}
+		if resp.ReasoningContent != "" {
+			fmt.Print(resp.ReasoningContent)
+		}
+		if resp.Content != "" {
+			fmt.Print(resp.Content)
+		}
+
+		if resp.ToolCall != nil {
+			fmt.Printf("→ [%s] calling...\n", resp.ToolCall.Tool)
+		}
+
+		if resp.ToolCallResult != nil {
+			fmt.Printf("→ [%s] result: %s\n", resp.ToolCallResult.Tool, resp.ToolCallResult.Result)
+		}
+
+		if resp.Done {
+			fmt.Println("\n[Stream completed]")
+			break
+		}
+	}
 }

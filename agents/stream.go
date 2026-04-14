@@ -26,6 +26,12 @@ type StreamResponse struct {
 	// Content is the text content in this chunk.
 	Content string
 
+	// ToolCalls is the tool calls in this chunk.
+	ToolCall *callTool
+
+	// ToolCallResult is the result of the tool call in this chunk.
+	ToolCallResult *callToolResult
+
 	// Done indicates whether the stream is complete.
 	Done bool
 

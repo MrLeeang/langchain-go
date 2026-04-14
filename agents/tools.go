@@ -83,6 +83,28 @@ func (a *Agent) findTool(name string) mcp.Tool {
 	return nil
 }
 
+type callTool struct {
+	Action string `json:"action"`
+	Tool   string `json:"tool"`
+	Args   any    `json:"args"`
+}
+
+func (c *callTool) String() string {
+	json, err := json.Marshal(c)
+	if err != nil {
+		return ""
+	}
+	return string(json)
+}
+
+func newCallTool(tool string, args any) *callTool {
+	return &callTool{
+		Action: "call_tool",
+		Tool:   tool,
+		Args:   args,
+	}
+}
+
 type callToolResult struct {
 	Action  string `json:"action"`
 	Tool    string `json:"tool"`
@@ -132,16 +154,12 @@ func (a *Agent) executeNativeToolCalls(ctx context.Context, ch chan<- StreamResp
 
 		if ch != nil {
 			// send json message to channel
-			jsonMessage, err := json.Marshal(map[string]interface{}{
-				"action": "call_tool",
-				"tool":   tc.Name,
-				"args":   args,
-			})
-			if err == nil {
-				ch <- StreamResponse{Content: "\n"}
-				ch <- StreamResponse{Content: string(jsonMessage)}
-				ch <- StreamResponse{Content: "\n"}
-			}
+			newCallTool := newCallTool(tc.Name, args)
+			ch <- StreamResponse{Content: "\n"}
+			ch <- StreamResponse{Content: newCallTool.String()}
+			ch <- StreamResponse{Content: "\n"}
+
+			ch <- StreamResponse{ToolCall: newCallTool}
 		}
 
 		callToolResult := newCallToolResult(tc.Name, args)
@@ -164,11 +182,11 @@ func (a *Agent) executeNativeToolCalls(ctx context.Context, ch chan<- StreamResp
 			// send json message to channel
 			callToolResult.Result = result
 
-			if err == nil {
-				ch <- StreamResponse{Content: "\n"}
-				ch <- StreamResponse{Content: callToolResult.String()}
-				ch <- StreamResponse{Content: "\n"}
-			}
+			ch <- StreamResponse{Content: "\n"}
+			ch <- StreamResponse{Content: callToolResult.String()}
+			ch <- StreamResponse{Content: "\n"}
+
+			ch <- StreamResponse{ToolCallResult: callToolResult}
 		}
 
 		a.messages = append(a.messages, llms.ChatCompletionMessage{

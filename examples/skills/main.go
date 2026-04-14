@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/MrLeeang/langchain-go/agents"
 	"github.com/MrLeeang/langchain-go/llms"
@@ -42,9 +43,12 @@ func main() {
 		tools = []mcp.Tool{}
 	}
 
-	skillList, err := skills.LoadFiles([]string{"./examples-my/skill/search-host.md"})
+	// Load local skills from examples/skills/skills/*
+	skillList, err := skills.LoadDirectory(filepath.Join(".", "examples", "skills", "skills"))
 	if err != nil {
-		panic(err)
+		fmt.Printf("Warning: Failed to load skills: %v\n", err)
+		fmt.Println("Continuing without skills...")
+		skillList = nil
 	}
 
 	// Create LLM instance
