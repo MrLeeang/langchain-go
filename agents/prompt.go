@@ -11,24 +11,31 @@ import (
 // registered lists skills to advertise by name, description, and path; the model loads full content via read_file (or equivalent).
 func buildSystemPrompt(skills []skills.Skill) string {
 	var b strings.Builder
-	b.WriteString(`You are an AI assistant. Use the provided function tools when they help answer the user.
-
-Skills (workflow playbooks) are Markdown files on disk, often with YAML front matter (---) containing name: and description: lines, followed by steps and guidance.
-
-When a user request matches a skill, load that playbook with the read_file tool (or the file-reading tool your environment exposes — use its actual name and parameters from the tool list). Pass the exact path given in the registered list below.
-
-After reading a skill file, follow its instructions and use other tools as needed. You may read multiple skill files if relevant. Do not invent file paths; if unsure, ask the user.
-`)
+	b.WriteString(`You are an AI assistant. Use the provided function tools when they help answer the user.`)
 	if len(skills) > 0 {
-		b.WriteString("\n## Available skills\n")
-		b.WriteString("Use your file tool with the path on the line below each entry to load the full document.\n\n")
-		for i, s := range skills {
+
+		b.WriteString(`
+## Skills
+Before replying: scan <available_skills> <description> entries.
+- If exactly one skill clearly applies: read its full document at <path> with "read_file" tool, then follow it.
+- If multiple could apply: choose the most specific one, then read/follow it.
+- If none clearly apply: do not read any skill.
+Skills (workflow playbooks) are Markdown files on disk, often with YAML front matter (---) containing name: and description: lines, followed by steps and guidance.
+After reading a skill file, follow its instructions and use other tools as needed. You may read multiple skill files if relevant. Do not invent file paths; if unsure, ask the user.
+When a skill file references a relative path, resolve it against the skill <path> and use that absolute path in tool commands.
+`)
+
+		b.WriteString("\n<available_skills>\n")
+		for _, s := range skills {
 			desc := s.Description
 			if desc == "" {
 				desc = "(no description)"
 			}
-			fmt.Fprintf(&b, "%d. **%s** — %s\n   Path: `%s`\n\n", i+1, s.Name, desc, s.Path)
+
+			fmt.Fprintf(&b, "<skill>\n<name>%s</name>\n<description>%s</description>\n<path>%s</path>\n</skill>\n", s.Name, desc, s.Path)
 		}
+
+		b.WriteString("</available_skills>")
 	}
 	return b.String()
 }
