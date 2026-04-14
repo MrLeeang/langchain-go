@@ -102,10 +102,11 @@ type fileStore struct {
 }
 
 type storedMessage struct {
-	Role       string           `json:"role"`
-	Content    string           `json:"content"`
-	ToolCalls  []storedToolCall `json:"tool_calls,omitempty"`
-	ToolCallID string           `json:"tool_call_id,omitempty"`
+	Role             string           `json:"role"`
+	ReasoningContent string           `json:"reasoning_content"`
+	Content          string           `json:"content"`
+	ToolCalls        []storedToolCall `json:"tool_calls,omitempty"`
+	ToolCallID       string           `json:"tool_call_id,omitempty"`
 }
 
 type storedToolCall struct {
@@ -131,9 +132,10 @@ func llmToStored(msgs []llms.ChatCompletionMessage) []storedMessage {
 		}
 
 		sm := storedMessage{
-			Role:       msg.Role,
-			Content:    msg.Content,
-			ToolCallID: msg.ToolCallID,
+			Role:             msg.Role,
+			Content:          msg.Content,
+			ReasoningContent: msg.ReasoningContent,
+			ToolCallID:       msg.ToolCallID,
 		}
 		if len(msg.ToolCalls) > 0 {
 			sm.ToolCalls = make([]storedToolCall, 0, len(msg.ToolCalls))
@@ -152,9 +154,10 @@ func llmToStored(msgs []llms.ChatCompletionMessage) []storedMessage {
 
 func storedToLLM(sm storedMessage) llms.ChatCompletionMessage {
 	msg := llms.ChatCompletionMessage{
-		Role:       sm.Role,
-		Content:    sm.Content,
-		ToolCallID: sm.ToolCallID,
+		Role:             sm.Role,
+		Content:          sm.Content,
+		ReasoningContent: sm.ReasoningContent,
+		ToolCallID:       sm.ToolCallID,
 	}
 	if len(sm.ToolCalls) > 0 {
 		msg.ToolCalls = make([]llms.ChatToolCall, 0, len(sm.ToolCalls))
