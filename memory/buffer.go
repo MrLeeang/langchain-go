@@ -44,7 +44,13 @@ func (m *BufferMemory) SaveMessages(ctx context.Context, conversationID string, 
 	defer m.mu.Unlock()
 
 	id := m.getConversationID(conversationID)
-	m.conversations[id] = append(m.conversations[id], messages...)
+	for _, msg := range messages {
+		// if system message, skip
+		if msg.Role == llms.ChatMessageRoleSystem {
+			continue
+		}
+		m.conversations[id] = append(m.conversations[id], msg)
+	}
 	return nil
 }
 

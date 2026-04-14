@@ -388,6 +388,11 @@ func (m *MilvusMemory) SaveMessages(ctx context.Context, conversationID string, 
 			// Otherwise, start a new pair
 			m.SetLatestUserInput(conversationID, msg.Content)
 		case llms.ChatMessageRoleAssistant:
+			// if calling tool, skip
+			if msg.ToolCalls != nil {
+				continue
+			}
+
 			// If we have a user input, pair it with this assistant response
 			if latestUserInput[conversationID] != "" && msg.Content != "" {
 				pairs = append(pairs, QAPair{
@@ -397,6 +402,9 @@ func (m *MilvusMemory) SaveMessages(ctx context.Context, conversationID string, 
 				})
 				m.SetLatestUserInput(conversationID, "") // Reset after pairing
 			}
+		case llms.ChatMessageRoleTool:
+			// Tool messages are handled separately, skip for now
+			continue
 		case llms.ChatMessageRoleSystem:
 			// System messages are handled separately, skip for now
 			continue

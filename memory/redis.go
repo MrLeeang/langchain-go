@@ -175,6 +175,12 @@ func (m *RedisMemory) SaveMessages(ctx context.Context, conversationID string, m
 	// Serialize each message and push to the list
 	pipe := m.client.Pipeline()
 	for _, msg := range messages {
+
+		// if system message, skip
+		if msg.Role == llms.ChatMessageRoleSystem {
+			continue
+		}
+
 		data, err := json.Marshal(msg)
 		if err != nil {
 			return fmt.Errorf("failed to marshal message: %w", err)

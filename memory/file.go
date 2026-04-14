@@ -102,10 +102,10 @@ type fileStore struct {
 }
 
 type storedMessage struct {
-	Role       string          `json:"role"`
-	Content    string          `json:"content"`
+	Role       string           `json:"role"`
+	Content    string           `json:"content"`
 	ToolCalls  []storedToolCall `json:"tool_calls,omitempty"`
-	ToolCallID string          `json:"tool_call_id,omitempty"`
+	ToolCallID string           `json:"tool_call_id,omitempty"`
 }
 
 type storedToolCall struct {
@@ -124,6 +124,12 @@ func normalizeConversationID(conversationID string) string {
 func llmToStored(msgs []llms.ChatCompletionMessage) []storedMessage {
 	out := make([]storedMessage, 0, len(msgs))
 	for _, msg := range msgs {
+
+		// if system message, skip
+		if msg.Role == llms.ChatMessageRoleSystem {
+			continue
+		}
+
 		sm := storedMessage{
 			Role:       msg.Role,
 			Content:    msg.Content,
