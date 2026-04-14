@@ -155,9 +155,11 @@ func (a *Agent) executeNativeToolCalls(ctx context.Context, ch chan<- StreamResp
 		if ch != nil {
 			// send json message to channel
 			newCallTool := newCallTool(tc.Name, args)
-			ch <- StreamResponse{Content: "\n"}
-			ch <- StreamResponse{Content: newCallTool.String()}
-			ch <- StreamResponse{Content: "\n"}
+			if a.debug {
+				ch <- StreamResponse{Content: "\n"}
+				ch <- StreamResponse{Content: newCallTool.String()}
+				ch <- StreamResponse{Content: "\n"}
+			}
 
 			ch <- StreamResponse{ToolCall: newCallTool}
 		}
@@ -181,10 +183,11 @@ func (a *Agent) executeNativeToolCalls(ctx context.Context, ch chan<- StreamResp
 		if ch != nil {
 			// send json message to channel
 			callToolResult.Result = result
-
-			ch <- StreamResponse{Content: "\n"}
-			ch <- StreamResponse{Content: callToolResult.String()}
-			ch <- StreamResponse{Content: "\n"}
+			if a.debug {
+				ch <- StreamResponse{Content: "\n"}
+				ch <- StreamResponse{Content: callToolResult.String()}
+				ch <- StreamResponse{Content: "\n"}
+			}
 
 			ch <- StreamResponse{ToolCallResult: callToolResult}
 		}
