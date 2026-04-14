@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	mcpclient "github.com/mark3labs/mcp-go/client"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -68,9 +69,16 @@ func (t *MCPTool) Call(ctx context.Context, input interface{}) (string, error) {
 		return "", fmt.Errorf("failed to initialize MCP client: %w", err)
 	}
 
+	toolName := t.remoteName
+
+	if t.conn.Name != "default" {
+		// undo the name prefix
+		toolName = strings.TrimPrefix(toolName, t.conn.Name+"/")
+	}
+
 	result, err := c.CallTool(ctx, mcp.CallToolRequest{
 		Params: mcp.CallToolParams{
-			Name:      t.remoteName,
+			Name:      toolName,
 			Arguments: input,
 		},
 	})
