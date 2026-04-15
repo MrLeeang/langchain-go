@@ -56,12 +56,12 @@ func (a *Agent) LoadMessages(latestUserInput string) {
 				historyIndex := a.findBestCompressionIndex(history, a.maxWindowTokens)
 
 				if historyIndex == 0 {
-					a.messages = append(a.messages, history...)
+					historyMessages := a.formatHistory(history)
+					a.messages = append(a.messages, historyMessages...)
 				} else {
 
 					// 触发压缩
 					historyMessages := a.compressHistory(history)
-
 					a.messages = append(a.messages, historyMessages...)
 
 					// clear memory and save the new messages with summary
@@ -124,7 +124,7 @@ func (a *Agent) compressHistory(history []llms.ChatCompletionMessage) []llms.Cha
 	historyIndex := a.findBestCompressionIndex(history, a.maxWindowTokens/2)
 
 	if historyIndex == 0 {
-		return history
+		return a.formatHistory(history)
 	}
 
 	messages := []llms.ChatCompletionMessage{}
@@ -161,6 +161,25 @@ func (a *Agent) compressHistory(history []llms.ChatCompletionMessage) []llms.Cha
 	}
 
 	messages = append(messages, history[historyIndex:]...)
+
+	return a.formatHistory(messages)
+}
+
+func (a *Agent) formatHistory(history []llms.ChatCompletionMessage) []llms.ChatCompletionMessage {
+
+	messages := []llms.ChatCompletionMessage{}
+
+	for _, msg := range history {
+		if msg.Role == llms.ChatMessageRoleSystem {
+			continue
+		}
+
+		if msg.Content == "" && msg.ToolCalls == nil {
+			continue
+		}
+
+		messages = append(messages, msg)
+	}
 
 	return messages
 }

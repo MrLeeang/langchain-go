@@ -137,12 +137,14 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 				if err == context.Canceled {
 					stream.Close()
 					ch <- StreamResponse{Done: true}
-					assistantMsg := llms.ChatCompletionMessage{
-						Role:             llms.ChatMessageRoleAssistant,
-						Content:          fullContent.String(),
-						ReasoningContent: reasoningContent.String(),
+					if fullContent.Len() > 0 {
+						assistantMsg := llms.ChatCompletionMessage{
+							Role:             llms.ChatMessageRoleAssistant,
+							Content:          fullContent.String(),
+							ReasoningContent: reasoningContent.String(),
+						}
+						a.messages = append(a.messages, assistantMsg)
 					}
-					a.messages = append(a.messages, assistantMsg)
 					return
 				}
 
