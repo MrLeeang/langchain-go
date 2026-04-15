@@ -121,8 +121,26 @@ type Memory interface {
 
 ### 5) Skills
 
-可通过 `skills.LoadDirectory` 或 `skills.LoadFiles` 加载 Markdown 技能文档，并使用 `agents.WithSkills(...)` 注入。  
+可通过`skills.Load`  `skills.LoadDirectory` 或 `skills.LoadFiles` 加载 Markdown 技能文档，并使用 `agents.WithSkills(...)` 注入。  
 Agent 会将技能元信息注入系统提示，模型可按路径读取技能内容后执行。
+
+```go
+skillList, err := skills.LoadDirectory("/skills")
+if err != nil {
+	fmt.Printf("Warning: Failed to load skills: %v\n", err)
+	fmt.Println("Continuing without skills...")
+	skillList = nil
+}
+
+// Create agent with tools skills and memory
+agent := agents.CreateReactAgent(ctx, llm,
+	agents.WithTools(tools),
+	agents.WithSkills(skillList),
+	agents.WithMemory(mem),
+	agents.WithConversationID("skills-chat"),
+	agents.WithMaxIterations(20), // Limit tool-calling iterations
+).WithPrompt("You are a helpful assistant that can use tools to help users.")
+```
 
 ## 常用 API
 
@@ -173,16 +191,10 @@ llms.Config{
 ```go
 configs := []*mcp.Config{
 	{
-		Name:      "my-server",
-		Transport: "sse", // sse | streamable_http | stdio
+		Name:      "default",
+		Transport: "sse", // sse | streamable_http
 		URL:       "http://localhost:8080/sse",
 		Disabled:  false,
-	},
-	{
-		Name:      "local-stdio",
-		Transport: "stdio",
-		Command:   "node",
-		Args:      []string{"./server.js"},
 	},
 }
 ```
@@ -206,6 +218,26 @@ mem, err := memory.NewRedisMemoryWithConfig(memory.RedisConfig{
 mem := memory.NewFileMemory("./data/memory.json")
 ```
 
+### Skills
+```go
+
+// 从目录加载skill
+skillList, err := skills.LoadDirectory("/skills")
+
+// 从配置加载skill
+skillConfigs := []skills.Skill{
+	{
+		Name: "skill name",
+		Description: "skill description",
+		Path: "skill path",
+	},
+}
+
+skillList, err := skills.Load(skillConfigs)
+
+```
+
+
 ## 示例目录（完整）
 
 仓库内可直接运行的示例位于 `examples/`：
@@ -222,19 +254,9 @@ mem := memory.NewFileMemory("./data/memory.json")
 - `examples/stop-stream`：流式输出中断（`agent.Stop()`）
 - `examples/thinking-mode`：开启 `Thinking: true` 的思考模式示例
 
-运行示例：
-
-```bash
-go run ./examples/simple-run
-go run ./examples/stream-example
-go run ./examples/agent-tools
-go run ./examples/file-memory
-go run ./examples/thinking-mode
-```
-
 ## 典型使用模式
 
-### 1) Agent + Tools + Memory
+### 1) Agent + Skills + Tools + Memory
 
 ```go
 tools, err := mcp.InitializeMCP(ctx, configs)
@@ -242,9 +264,18 @@ if err != nil {
 	panic(err)
 }
 
+skillList, err := skills.LoadDirectory("/skills")
+
+if err != nil {
+	fmt.Printf("Warning: Failed to load skills: %v\n", err)
+	fmt.Println("Continuing without skills...")
+	skillList = nil
+}
+
 mem := memory.NewBufferMemory()
 
 agent := agents.CreateReactAgent(ctx, llm,
+	agents.WithSkills(skillList),
 	agents.WithTools(tools),
 	agents.WithMemory(mem),
 	agents.WithConversationID("user-123"),
@@ -266,6 +297,15 @@ for resp := range ch {
 	if resp.Content != "" {
 		fmt.Print(resp.Content)
 	}
+
+	if resp.ToolCall != nil {
+		continue
+	}
+
+	if resp.ToolCallResult != nil {
+		continue
+	}
+
 	if resp.Done {
 		break
 	}
@@ -297,8 +337,7 @@ langchain-go/
 ├── mcp/         # MCP 配置、连接、工具枚举与调用
 ├── memory/      # Buffer / Redis / Milvus / File Memory
 ├── skills/      # Skills 加载与 Front Matter 解析
-├── examples/    # 官方示例
-└── examples-my/ # 自定义示例
+└── examples/    # 官方示例
 ```
 
 ## 常见问题
