@@ -73,7 +73,7 @@ func (t *MCPTool) Call(ctx context.Context, input interface{}) (string, error) {
 
 	if t.conn.Name != "default" {
 		// undo the name prefix
-		toolName = strings.TrimPrefix(toolName, t.conn.Name+"/")
+		toolName = strings.TrimPrefix(toolName, t.conn.Name+"_")
 	}
 
 	result, err := c.CallTool(ctx, mcp.CallToolRequest{
