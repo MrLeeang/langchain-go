@@ -165,6 +165,9 @@ func openaiMessageParams(msgs []ChatCompletionMessage) []openai.ChatCompletionMe
 					},
 				})
 			}
+			if msg.ReasoningContent != "" {
+				ap.SetExtraFields(map[string]any{"reasoning_content": msg.ReasoningContent})
+			}
 			out = append(out, openai.ChatCompletionMessageParamUnion{OfAssistant: &ap})
 		case ChatMessageRoleTool:
 			out = append(out, openai.ChatCompletionMessageParamUnion{
@@ -278,6 +281,9 @@ func completionFromSDK(resp *openai.ChatCompletion) ChatCompletionResponse {
 		msg := ChatCompletionMessage{
 			Role:    string(ch.Message.Role),
 			Content: ch.Message.Content,
+		}
+		if raw := ch.Message.RawJSON(); raw != "" {
+			msg.ReasoningContent = gjson.Get(raw, "reasoning_content").String()
 		}
 		msg.ToolCalls = chatToolCallsFromOpenAIMessageUnions(ch.Message.ToolCalls)
 		out.Choices = append(out.Choices, ChatCompletionChoice{
