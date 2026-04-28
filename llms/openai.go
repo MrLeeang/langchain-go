@@ -105,7 +105,7 @@ func (m *OpenAIModel) applyThinkingParams(params *openai.ChatCompletionNewParams
 		return
 	}
 	ex := map[string]any{"enable_thinking": false}
-	if strings.HasPrefix(m.model, "kimi-") {
+	if strings.HasPrefix(m.model, "kimi-") || strings.HasPrefix(m.model, "deepseek-") {
 		ex["thinking"] = map[string]any{"type": "disabled"}
 	}
 
