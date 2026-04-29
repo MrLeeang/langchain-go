@@ -86,8 +86,8 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 		defer func() {
 			a.EndTime = time.Now()
 			a.Duration = a.EndTime.Sub(a.StartTime)
+
 			time.Sleep(1 * time.Second)
-			close(ch)
 
 			if a.mem != nil && a.conversationID != "" {
 				// user message already saved to memory in handleStreamResponse
@@ -95,6 +95,9 @@ func (a *Agent) StreamWithContext(ctx context.Context, message string) <-chan St
 					fmt.Println("Error saving messages to memory:", err)
 				}
 			}
+
+			close(ch)
+
 		}()
 
 		userMsg := llms.ChatCompletionMessage{
