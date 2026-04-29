@@ -82,7 +82,7 @@ func (a *Agent) RunWithContext(ctx context.Context, message string) (string, err
 
 		if a.mem != nil && a.conversationID != "" {
 			// user message already saved to memory in handleStreamResponse
-			if err := a.mem.SaveMessages(ctx, a.conversationID, a.messages[a.historyMessageIndex:]); err != nil {
+			if err := a.mem.SaveMessages(a.ctx, a.conversationID, a.messages[a.historyMessageIndex:]); err != nil {
 				fmt.Println("Error saving messages to memory:", err)
 			}
 		}
