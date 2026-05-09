@@ -135,6 +135,11 @@ func (a *Agent) compressHistory(history []llms.ChatCompletionMessage) []llms.Cha
 		MaxTokens: 2000,
 	})
 
+	// 防止tool消息被截断，导致后续消息无法正确生成
+	for historyIndex >= 0 && historyIndex < len(history) && history[historyIndex].Role == llms.ChatMessageRoleTool {
+		historyIndex++
+	}
+
 	// generate summary with context (only summarize the messages that are being removed to save tokens)
 	summary, err := summarizer.GenerateSummaryWithContext(a.ctx, history[:historyIndex])
 
