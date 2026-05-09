@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MrLeeang/langchain-go/llms"
+	"github.com/MrLeeang/langchain-go/v2/llms"
 )
 
 // streamToolCallBuffer accumulates one tool_call across streamed chunks (by tool index).

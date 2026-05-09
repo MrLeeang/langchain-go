@@ -3,8 +3,8 @@ package agents
 import (
 	"fmt"
 
-	"github.com/MrLeeang/langchain-go/llms"
-	"github.com/MrLeeang/langchain-go/memory"
+	"github.com/MrLeeang/langchain-go/v2/llms"
+	"github.com/MrLeeang/langchain-go/v2/memory"
 )
 
 // GetMemory returns the memory implementation used by this agent.

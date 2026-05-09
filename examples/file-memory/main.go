@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/MrLeeang/langchain-go/agents"
-	"github.com/MrLeeang/langchain-go/llms"
-	"github.com/MrLeeang/langchain-go/memory"
+	"github.com/MrLeeang/langchain-go/v2/agents"
+	"github.com/MrLeeang/langchain-go/v2/llms"
+	"github.com/MrLeeang/langchain-go/v2/memory"
 )
 
 // This example demonstrates FileMemory, which persists chat history in a JSON file.

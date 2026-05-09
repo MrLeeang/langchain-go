@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/MrLeeang/langchain-go/llms"
+	"github.com/MrLeeang/langchain-go/v2/llms"
 )
 
 // SummarizerConfig holds configuration for the summarizer

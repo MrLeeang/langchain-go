@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/MrLeeang/langchain-go/agents"
-	"github.com/MrLeeang/langchain-go/llms"
-	"github.com/MrLeeang/langchain-go/mcp"
-	"github.com/MrLeeang/langchain-go/memory"
+	"github.com/MrLeeang/langchain-go/v2/agents"
+	"github.com/MrLeeang/langchain-go/v2/llms"
+	"github.com/MrLeeang/langchain-go/v2/mcp"
+	"github.com/MrLeeang/langchain-go/v2/memory"
 )
 
 // This example demonstrates how to use an agent with MCP tools.

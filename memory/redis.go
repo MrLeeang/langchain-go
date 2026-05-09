@@ -8,7 +8,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/MrLeeang/langchain-go/llms"
+	"github.com/MrLeeang/langchain-go/v2/llms"
 )
 
 // RedisMemory is a memory implementation that uses Redis to store and retrieve conversation history.

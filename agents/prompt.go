@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/MrLeeang/langchain-go/skills"
+	"github.com/MrLeeang/langchain-go/v2/skills"
 )
 
 // buildSystemPrompt is used when the agent has MCP tools registered (OpenAI `tools` API).

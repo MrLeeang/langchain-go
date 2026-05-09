@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/MrLeeang/langchain-go/llms"
+	"github.com/MrLeeang/langchain-go/v2/llms"
 )
 
 // FileMemory persists conversation history in a single JSON file on disk.

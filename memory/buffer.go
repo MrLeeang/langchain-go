@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/MrLeeang/langchain-go/llms"
+	"github.com/MrLeeang/langchain-go/v2/llms"
 )
 
 // BufferMemory is a simple in-memory implementation of the Memory interface.

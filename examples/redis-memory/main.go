@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/MrLeeang/langchain-go/agents"
-	"github.com/MrLeeang/langchain-go/llms"
-	"github.com/MrLeeang/langchain-go/memory"
+	"github.com/MrLeeang/langchain-go/v2/agents"
+	"github.com/MrLeeang/langchain-go/v2/llms"
+	"github.com/MrLeeang/langchain-go/v2/memory"
 )
 
 // This example demonstrates how to use a custom memory implementation (Redis)

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/MrLeeang/langchain-go/agents"
-	"github.com/MrLeeang/langchain-go/llms"
+	"github.com/MrLeeang/langchain-go/v2/agents"
+	"github.com/MrLeeang/langchain-go/v2/llms"
 )
 
 // This example demonstrates the simplest usage of the agent with Run method.

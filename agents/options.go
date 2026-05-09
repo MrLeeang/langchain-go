@@ -1,9 +1,9 @@
 package agents
 
 import (
-	"github.com/MrLeeang/langchain-go/mcp"
-	"github.com/MrLeeang/langchain-go/memory"
-	"github.com/MrLeeang/langchain-go/skills"
+	"github.com/MrLeeang/langchain-go/v2/mcp"
+	"github.com/MrLeeang/langchain-go/v2/memory"
+	"github.com/MrLeeang/langchain-go/v2/skills"
 )
 
 // AgentOption is a function type for configuring an Agent.

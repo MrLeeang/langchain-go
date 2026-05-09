@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/MrLeeang/langchain-go/llms"
-	"github.com/MrLeeang/langchain-go/mcp"
-	"github.com/MrLeeang/langchain-go/memory"
-	"github.com/MrLeeang/langchain-go/skills"
+	"github.com/MrLeeang/langchain-go/v2/llms"
+	"github.com/MrLeeang/langchain-go/v2/mcp"
+	"github.com/MrLeeang/langchain-go/v2/memory"
+	"github.com/MrLeeang/langchain-go/v2/skills"
 )
 
 // Agent represents a ReAct-style agent that can use tools to answer questions.

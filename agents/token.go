@@ -1,7 +1,7 @@
 package agents
 
 import (
-	"github.com/MrLeeang/langchain-go/llms"
+	"github.com/MrLeeang/langchain-go/v2/llms"
 	"github.com/pkoukk/tiktoken-go"
 )
 

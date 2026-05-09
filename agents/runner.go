@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/MrLeeang/langchain-go/llms"
+	"github.com/MrLeeang/langchain-go/v2/llms"
 )
 
 // Run processes a user message and returns the agent's response.

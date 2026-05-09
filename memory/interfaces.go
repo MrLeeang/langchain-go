@@ -3,7 +3,7 @@ package memory
 import (
 	"context"
 
-	"github.com/MrLeeang/langchain-go/llms"
+	"github.com/MrLeeang/langchain-go/v2/llms"
 )
 
 // Memory is the interface that all memory implementations must satisfy.

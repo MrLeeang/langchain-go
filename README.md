@@ -26,7 +26,7 @@
 ## 安装
 
 ```bash
-go get github.com/MrLeeang/langchain-go
+go get github.com/MrLeeang/langchain-go/v2
 ```
 
 ## 快速开始
@@ -39,8 +39,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/MrLeeang/langchain-go/agents"
-	"github.com/MrLeeang/langchain-go/llms"
+	"github.com/MrLeeang/langchain-go/v2/agents"
+	"github.com/MrLeeang/langchain-go/v2/llms"
 )
 
 func main() {
@@ -358,7 +358,15 @@ langchain-go/
 - `URL` 是否可访问
 - MCP 服务是否已启动并可 `ListTools`
 
-### 3) 历史对话未生效
+### 3) `go get` 报错要求加 `/v2`
+
+从 **v2.0.0** 起本模块符合 Go 语义化版本规范，模块路径为：
+
+`github.com/MrLeeang/langchain-go/v2`
+
+依赖与 import 均需带 **`/v2`**（例如 `github.com/MrLeeang/langchain-go/v2/agents`）。**v1.9.9 及以前**仍使用不带 `/v2` 的路径。
+
+### 4) 历史对话未生效
 
 检查：
 
