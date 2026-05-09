@@ -105,15 +105,14 @@ func (a *Agent) findBestCompressionIndex(history []llms.ChatCompletionMessage, m
 		return 0
 	}
 
-	// 从 historyIndex 开始向后找第一个 User 消息
-	originalIndex := historyIndex
+	// 从 historyIndex 开始向前遍历，找到第一个 User 消息
 	for historyIndex < len(history) && history[historyIndex].Role != llms.ChatMessageRoleUser {
-		historyIndex++
+		historyIndex--
 	}
 
 	// 如果没找到 User 消息，使用原始位置
-	if historyIndex >= len(history) {
-		historyIndex = originalIndex
+	if historyIndex >= len(history) || historyIndex < 0 {
+		return 0
 	}
 
 	return historyIndex
