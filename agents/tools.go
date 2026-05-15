@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/MrLeeang/langchain-go/v2/llms"
 	"github.com/MrLeeang/langchain-go/v2/mcp"
@@ -134,7 +135,14 @@ func newCallToolResult(tool string, args any) *callToolResult {
 }
 
 func (a *Agent) executeNativeToolCalls(ctx context.Context, ch chan<- StreamResponse, calls []llms.ChatToolCall) error {
-	for _, tc := range calls {
+	type prepared struct {
+		tc   llms.ChatToolCall
+		tool mcp.Tool
+		args map[string]interface{}
+	}
+	preparedCalls := make([]prepared, len(calls))
+
+	for i, tc := range calls {
 		if strings.TrimSpace(tc.Name) == "" {
 			return fmt.Errorf("tool call has empty function name (tool_call_id=%q)", tc.ID)
 		}
@@ -151,51 +159,59 @@ func (a *Agent) executeNativeToolCalls(ctx context.Context, ch chan<- StreamResp
 		if args == nil {
 			args = map[string]interface{}{}
 		}
+		preparedCalls[i] = prepared{tc: tc, tool: tool, args: args}
+	}
 
-		if ch != nil {
-			// send json message to channel
-			newCallTool := newCallTool(tc.Name, args)
-			if a.debug {
-				ch <- StreamResponse{Content: "\n"}
-				ch <- StreamResponse{Content: newCallTool.String()}
-				ch <- StreamResponse{Content: "\n"}
+	results := make([]string, len(calls))
+	var wg sync.WaitGroup
+	for i := range preparedCalls {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			p := preparedCalls[i]
+			tc := p.tc
+			tool := p.tool
+			args := p.args
+
+			if ch != nil {
+				ct := newCallTool(tc.Name, args)
+				if a.debug {
+					ch <- StreamResponse{Content: "\n"}
+					ch <- StreamResponse{Content: ct.String()}
+					ch <- StreamResponse{Content: "\n"}
+				}
+				ch <- StreamResponse{ToolCall: ct}
 			}
 
-			ch <- StreamResponse{ToolCall: newCallTool}
-		}
+			callToolResult := newCallToolResult(tc.Name, args)
 
-		callToolResult := newCallToolResult(tc.Name, args)
-
-		result, err := tool.Call(ctx, args)
-		if err != nil {
-			result = "tool call failed for " + tc.Name + ": " + err.Error()
-			callToolResult.Error = true
-			callToolResult.Message = result
-		} else {
-			// runes := []rune(result)
-
-			// if len(runes) > 1000 && tc.Name != "read_file" {
-			// 	// truncate result to 1000 characters to avoid overwhelming the model with too much tool output, which can lead to context window issues and degraded performance. The full result is still included in the tool_result message sent to the channel and added to the agent's messages, so the model can access it if needed.
-			// 	result = string(runes[:1000]) + "...(truncated)"
-			// }
-		}
-
-		if ch != nil {
-			// send json message to channel
-			callToolResult.Result = result
-			if a.debug {
-				ch <- StreamResponse{Content: "\n"}
-				ch <- StreamResponse{Content: callToolResult.String()}
-				ch <- StreamResponse{Content: "\n"}
+			result, err := tool.Call(ctx, args)
+			if err != nil {
+				result = "tool call failed for " + tc.Name + ": " + err.Error()
+				callToolResult.Error = true
+				callToolResult.Message = result
 			}
 
-			ch <- StreamResponse{ToolCallResult: callToolResult}
-		}
+			if ch != nil {
+				callToolResult.Result = result
+				if a.debug {
+					ch <- StreamResponse{Content: "\n"}
+					ch <- StreamResponse{Content: callToolResult.String()}
+					ch <- StreamResponse{Content: "\n"}
+				}
+				ch <- StreamResponse{ToolCallResult: callToolResult}
+			}
 
+			results[i] = result
+		}(i)
+	}
+	wg.Wait()
+
+	for i, tc := range calls {
 		a.messages = append(a.messages, llms.ChatCompletionMessage{
 			Role:       llms.ChatMessageRoleTool,
 			ToolCallID: tc.ID,
-			Content:    result,
+			Content:    results[i],
 		})
 	}
 	return nil
