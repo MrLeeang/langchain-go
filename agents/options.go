@@ -1,19 +1,57 @@
 package agents
 
 import (
-	"github.com/MrLeeang/langchain-go/v2/mcp"
+	"fmt"
+
 	"github.com/MrLeeang/langchain-go/v2/memory"
 	"github.com/MrLeeang/langchain-go/v2/skills"
+	"github.com/MrLeeang/langchain-go/v2/tools"
+	"github.com/MrLeeang/langchain-go/v2/tools/builtin"
 )
 
 // AgentOption is a function type for configuring an Agent.
 type AgentOption func(*Agent)
 
-// WithTools sets the tools that the agent can use.
+// WithTools sets the tools that the agent can use (MCP tools, function tools, or both via [tools.Merge]).
 // If not provided, the agent will be created without tools.
-func WithTools(tools []mcp.Tool) AgentOption {
+func WithTools(toolList []tools.Tool) AgentOption {
 	return func(a *Agent) {
-		a.tools = tools
+		a.tools = toolList
+	}
+}
+
+// WithRegistry registers all tools from a [tools.Registry].
+func WithRegistry(reg *tools.Registry) AgentOption {
+	return func(a *Agent) {
+		if reg != nil {
+			a.tools = tools.Merge(a.tools, reg.Tools())
+		}
+	}
+}
+
+// WithToolRouter registers all tools from a [tools.Router] (prefix-based routing).
+func WithToolRouter(router *tools.Router) AgentOption {
+	return func(a *Agent) {
+		if router != nil {
+			a.tools = tools.Merge(a.tools, router.Tools())
+		}
+	}
+}
+
+// WithBuiltinTools registers built-in tools (read_file, list_dir, file_info, and optionally write_file).
+// root is the workspace directory; empty uses the process working directory.
+func WithBuiltinTools(root string) AgentOption {
+	return WithBuiltinToolsConfig(builtin.Config{Root: root})
+}
+
+// WithBuiltinToolsConfig registers built-in tools with full [builtin.Config].
+func WithBuiltinToolsConfig(cfg builtin.Config) AgentOption {
+	return func(a *Agent) {
+		builtins, err := builtin.Tools(cfg)
+		if err != nil {
+			panic(fmt.Sprintf("builtin tools: %v", err))
+		}
+		a.tools = tools.Merge(a.tools, builtins)
 	}
 }
 

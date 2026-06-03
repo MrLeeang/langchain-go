@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/MrLeeang/langchain-go/v2/llms"
-	"github.com/MrLeeang/langchain-go/v2/mcp"
 	"github.com/MrLeeang/langchain-go/v2/memory"
+	"github.com/MrLeeang/langchain-go/v2/tools"
 	"github.com/MrLeeang/langchain-go/v2/skills"
 )
 
@@ -16,7 +16,7 @@ type Agent struct {
 	ctx                 context.Context
 	cancel              context.CancelFunc
 	llm                 llms.LLM
-	tools               []mcp.Tool
+	tools               []tools.Tool
 	messages            []llms.ChatCompletionMessage
 	historyMessageIndex int
 	maxWindowTokens     int
@@ -54,7 +54,7 @@ func CreateReactAgent(ctx context.Context, llm llms.LLM, opts ...AgentOption) *A
 	agent := &Agent{
 		ctx:             ctx,
 		llm:             llm,
-		tools:           []mcp.Tool{}, // Default to empty tools
+		tools:           []tools.Tool{}, // Default to empty tools
 		messages:        []llms.ChatCompletionMessage{},
 		maxIter:         10,
 		mem:             memory.NewBufferMemory(), // Default memory implementation

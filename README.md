@@ -7,6 +7,8 @@
 - **ReAct Agent 执行循环**：支持多轮「思考 -> 工具调用 -> 观察 -> 回复」
 - **OpenAI 兼容模型接入**：支持 OpenAI 及兼容 `/v1` 协议的网关/私有部署
 - **原生工具调用**：将 MCP Tool 自动映射为 OpenAI `tools` (function calling)
+- **函数工具（Go Function Tools）**：将 Go 函数注册为工具，自动从结构体生成 JSON Schema、支持 Registry 与前缀路由
+- **内置工具**：`read_file`、`list_dir`、`file_info`，可选 `write_file`（工作区路径沙箱）
 - **流式输出**：支持文本增量输出、推理内容增量输出、工具调用过程透出
 - **多种 Memory 实现**
   - `BufferMemory`：内存会话
@@ -97,15 +99,62 @@ llm := llms.NewOpenAIModel(llms.Config{
 
 除聊天外，也支持 Embeddings（`Embeddings(ctx, []string)`）。
 
-### 3) Tools（MCP）
+### 3) Tools（MCP + 函数工具）
 
-通过 `mcp.InitializeMCP` 初始化 MCP 服务并获取工具列表，Agent 会自动将其作为 function tools 提供给模型。
+**MCP**：通过 `mcp.InitializeMCP` 初始化 MCP 服务并获取工具列表，Agent 会自动将其作为 function tools 提供给模型。
 
 支持的传输方式：
 
 - `sse`
 - `streamable_http`
 - `stdio`
+
+**函数工具**：将 Go 函数注册为 Agent 工具，参数 Schema 由结构体 `json` / `description` / `required` 标签自动生成。
+
+```go
+type weatherArgs struct {
+	City string `json:"city" description:"City name" required:"true"`
+}
+
+func getWeather(_ context.Context, args weatherArgs) (string, error) {
+	return fmt.Sprintf("sunny in %s", args.City), nil
+}
+
+reg := tools.NewRegistry()
+reg.RegisterFunc(getWeather, tools.WithName("get_weather"), tools.WithDescription("Get weather"))
+
+// 与 MCP 工具合并
+agent := agents.CreateReactAgent(ctx, llm,
+	agents.WithTools(tools.Merge(mcpTools, reg.Tools())),
+	// 或: agents.WithRegistry(reg),
+)
+```
+
+**工具路由**（多组工具命名空间）：
+
+```go
+mathReg := tools.NewRegistry()
+mathReg.RegisterFunc(add, tools.WithName("add"))
+
+router := tools.NewRouter().
+	Route("math", mathReg).
+	Fallback(mainReg) // 无前缀的工具走 fallback
+
+agent := agents.CreateReactAgent(ctx, llm, agents.WithToolRouter(router))
+// LLM 可见工具名: math_add
+```
+
+**内置文件工具**（Skills 场景下用于 `read_file` 读取技能 Markdown）：
+
+```go
+agent := agents.CreateReactAgent(ctx, llm,
+	agents.WithBuiltinTools("."), // 工作区根目录
+	agents.WithSkills(skillList),
+)
+
+// 或允许写入
+agents.WithBuiltinToolsConfig(builtin.Config{Root: "/path/to/project", AllowWrite: true})
+```
 
 ### 4) Memory
 
@@ -147,7 +196,11 @@ agent := agents.CreateReactAgent(ctx, llm,
 ### Agent 创建与选项
 
 - `agents.CreateReactAgent(ctx, llm, opts...)`
-- `agents.WithTools(tools []mcp.Tool)`
+- `agents.WithTools(toolList []tools.Tool)`
+- `agents.WithRegistry(reg *tools.Registry)`
+- `agents.WithToolRouter(router *tools.Router)`
+- `agents.WithBuiltinTools(root string)`
+- `agents.WithBuiltinToolsConfig(cfg builtin.Config)`
 - `agents.WithSkills(skills []skills.Skill)`
 - `agents.WithMemory(mem memory.Memory)`
 - `agents.WithConversationID(id string)`
@@ -249,6 +302,7 @@ skillList, err := skills.Load(skillConfigs)
 - `examples/redis-memory`：Redis 持久化会话
 - `examples/milvus-memory`：Milvus 语义记忆
 - `examples/agent-tools`：MCP 工具调用
+- `examples/func-tools`：Go 函数工具注册与调用
 - `examples/skills`：Skills + MCP + Memory 组合
 - `examples/metadata`：运行元数据与 Token 统计
 - `examples/stop-stream`：流式输出中断（`agent.Stop()`）
@@ -334,6 +388,8 @@ func (m *MyMemory) ClearMessages(ctx context.Context, id string) error {
 langchain-go/
 ├── agents/      # ReAct Agent 主流程、流式处理、工具执行、统计与中断
 ├── llms/        # OpenAI 兼容 LLM 封装（聊天 + 流式 + 向量）
+├── tools/       # 函数工具、Registry、Router、JSON Schema 生成
+│   └── builtin/ # 内置 read_file、list_dir 等
 ├── mcp/         # MCP 配置、连接、工具枚举与调用
 ├── memory/      # Buffer / Redis / Milvus / File Memory
 ├── skills/      # Skills 加载与 Front Matter 解析

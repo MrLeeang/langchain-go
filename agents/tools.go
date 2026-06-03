@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/MrLeeang/langchain-go/v2/llms"
-	"github.com/MrLeeang/langchain-go/v2/mcp"
+	"github.com/MrLeeang/langchain-go/v2/tools"
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/shared"
 )
@@ -26,10 +26,10 @@ func (a *Agent) chatStream(ctx context.Context) (*llms.ChatCompletionStream, err
 	return om.ChatStreamWithTools(ctx, a.messages, toolParams)
 }
 
-// OpenAICompletionTools builds OpenAI Chat Completions `tools` from MCP tools (function definitions).
-func OpenAICompletionTools(tools []mcp.Tool) []openai.ChatCompletionToolUnionParam {
-	out := make([]openai.ChatCompletionToolUnionParam, 0, len(tools))
-	for _, t := range tools {
+// OpenAICompletionTools builds OpenAI Chat Completions `tools` from agent tools (function definitions).
+func OpenAICompletionTools(toolList []tools.Tool) []openai.ChatCompletionToolUnionParam {
+	out := make([]openai.ChatCompletionToolUnionParam, 0, len(toolList))
+	for _, t := range toolList {
 		out = append(out, openai.ChatCompletionFunctionTool(shared.FunctionDefinitionParam{
 			Name:        t.Name(),
 			Description: openai.String(toolModelDescription(t)),
@@ -39,11 +39,11 @@ func OpenAICompletionTools(tools []mcp.Tool) []openai.ChatCompletionToolUnionPar
 	return out
 }
 
-func toolModelDescription(t mcp.Tool) string {
+func toolModelDescription(t tools.Tool) string {
 	return t.Description()
 }
 
-func functionParametersForTool(t mcp.Tool) shared.FunctionParameters {
+func functionParametersForTool(t tools.Tool) shared.FunctionParameters {
 	return normalizeFunctionParameters(t.ArgumentsSchema())
 }
 
@@ -75,7 +75,7 @@ func normalizeFunctionParameters(schema any) shared.FunctionParameters {
 }
 
 // findTool finds a tool by name.
-func (a *Agent) findTool(name string) mcp.Tool {
+func (a *Agent) findTool(name string) tools.Tool {
 	for _, t := range a.tools {
 		if t.Name() == name {
 			return t
@@ -137,7 +137,7 @@ func newCallToolResult(tool string, args any) *callToolResult {
 func (a *Agent) executeNativeToolCalls(ctx context.Context, ch chan<- StreamResponse, calls []llms.ChatToolCall) error {
 	type prepared struct {
 		tc   llms.ChatToolCall
-		tool mcp.Tool
+		tool tools.Tool
 		args map[string]interface{}
 	}
 	preparedCalls := make([]prepared, len(calls))

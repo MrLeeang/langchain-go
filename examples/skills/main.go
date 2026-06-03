@@ -8,7 +8,6 @@ import (
 
 	"github.com/MrLeeang/langchain-go/v2/agents"
 	"github.com/MrLeeang/langchain-go/v2/llms"
-	"github.com/MrLeeang/langchain-go/v2/mcp"
 	"github.com/MrLeeang/langchain-go/v2/memory"
 	"github.com/MrLeeang/langchain-go/v2/skills"
 )
@@ -22,25 +21,6 @@ func main() {
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" {
 		apiKey = "your-api-key-here" // Replace with your actual API key
-	}
-
-	// Configure MCP servers
-	configs := []*mcp.Config{
-		{
-			Name:      "my-mcp-server",
-			Transport: "sse",
-			URL:       "http://localhost:8080/sse",
-			Disabled:  false,
-		},
-		// You can add more MCP server configurations here
-	}
-
-	// Initialize MCP tools
-	tools, err := mcp.InitializeMCP(ctx, configs)
-	if err != nil {
-		fmt.Printf("Warning: Failed to initialize MCP tools: %v\n", err)
-		fmt.Println("Continuing without tools...")
-		tools = []mcp.Tool{}
 	}
 
 	// Load local skills from examples/skills/skills/*
@@ -63,14 +43,13 @@ func main() {
 
 	// Create agent with tools and memory
 	agent := agents.CreateReactAgent(ctx, llm,
-		agents.WithTools(tools),
+		agents.WithBuiltinTools("."),
 		agents.WithSkills(skillList),
 		agents.WithMemory(mem),
 		agents.WithConversationID("skills-chat"),
 		agents.WithMaxIterations(20), // Limit tool-calling iterations
 	).WithPrompt("You are a helpful assistant that can use tools to help users.")
 
-	fmt.Printf("Agent created with %d tools\n", len(tools))
 	fmt.Println("============================")
 
 	// Ask a question that might require tool usage
