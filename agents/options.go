@@ -41,7 +41,7 @@ func WithToolRouter(router *tools.Router) AgentOption {
 // WithBuiltinTools registers built-in tools (read_file, list_dir, file_info, and optionally write_file).
 // root is the workspace directory; empty uses the process working directory.
 func WithBuiltinTools(root string) AgentOption {
-	return WithBuiltinToolsConfig(builtin.Config{Root: root})
+	return WithBuiltinToolsConfig(builtin.Config{Root: root, AllowWrite: true})
 }
 
 // WithBuiltinToolsConfig registers built-in tools with full [builtin.Config].
